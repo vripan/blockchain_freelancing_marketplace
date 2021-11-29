@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.0;
 
 contract Ownable
 {
-    address internal immutable owner;
+    address internal owner;
     constructor() {owner = msg.sender;}
 
     modifier restricted() {
@@ -17,6 +19,6 @@ contract Ownable
         public
         restricted 
     {
-        owner = msg.sender;
+        owner = new_owner;
     }
 }

@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.0;
 
-import "Ownable.sol";
-import "MarketplaceEntities.sol"
+import "./Ownable.sol";
+import "./MarketplaceEntities.sol";
 
 contract MarketplaceApp is Ownable
 {
@@ -30,9 +32,7 @@ contract MarketplaceApp is Ownable
         _;
     }
 
-    modifier
-
-    modifier taskState(uint taskId, address manager, MarketplaceEntities.Role.TaskState state)
+    modifier taskState(uint taskId, address manager, MarketplaceEntities.TaskState state)
     {
         // todo: this (check task manager to be `manager`)
         _;
@@ -96,7 +96,7 @@ contract MarketplaceApp is Ownable
         emit MemberJoined(MarketplaceEntities.Role.Evaluator, data.name, msg.sender);
     }
 
-    function addCategory(string name)
+    function addCategory(string memory name)
         public
         restricted
         returns (uint)
@@ -125,7 +125,7 @@ contract MarketplaceApp is Ownable
     function sponsorTask(uint taskId, uint amount)
         public
         restrictedTo(MarketplaceEntities.Role.Sponsor)
-        canSponsor(taskId, msg.sender)
+        canSponsor(msg.sender, taskId)
     {
         // transition from notFound to founded
     }

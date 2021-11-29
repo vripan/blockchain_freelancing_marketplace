@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.0;
 
 library MarketplaceEntities
@@ -50,7 +52,7 @@ library MarketplaceEntities
     function StringifiedRole(Role role) 
         public 
         pure
-        returns (string)
+        returns (string memory)
     {
         // todo: this
     }
