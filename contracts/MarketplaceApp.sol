@@ -3,7 +3,7 @@ pragma solidity >=0.4.22 <0.8.0;
 import "Ownable.sol";
 import "MarketplaceEntities.sol"
 
-contract Marketplace is Ownable
+contract MarketplaceApp is Ownable
 {
     uint categoriesCount;
     uint membersCount;
