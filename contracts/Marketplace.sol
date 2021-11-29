@@ -22,6 +22,7 @@ contract Marketplace is Ownable
     event TaskAdded(address owner, string description, uint id);
 
     uint constant TASK_NO_FREELANCERS_TIMEOUT_MS = 10000;
+    uint constant TASK_NO_EVALUATOR_TIMEOUT_MS = 10000;
 
     modifier restrictedTo(MarketplaceEntities.Role role)
     {
