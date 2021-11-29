@@ -5,18 +5,22 @@ pragma solidity ^0.8.0;
 import "./Ownable.sol";
 import "./MarketplaceEntities.sol";
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 contract MarketplaceApp is Ownable
 {
-    uint categoriesCount;
-    uint membersCount;
-    uint tasksCount;
+    ERC20 internal token;
     
-    mapping(uint => string) categories;
-    mapping(uint => MarketplaceEntities.TaskData) tasks;
-    mapping(address => MarketplaceEntities.FreelancerData) freelancers;
-    mapping(address => MarketplaceEntities.ManagerData) maanger;
-    mapping(address => MarketplaceEntities.SponsorData) sponsors;
-    mapping(address => MarketplaceEntities.EvaluatorData) evaluators;
+    uint internal categoriesCount;
+    uint internal membersCount;
+    uint internal tasksCount;
+    
+    mapping(uint => string) internal categories;
+    mapping(uint => MarketplaceEntities.TaskData) internal tasks;
+    mapping(address => MarketplaceEntities.FreelancerData) internal freelancers;
+    mapping(address => MarketplaceEntities.ManagerData) internal maanger;
+    mapping(address => MarketplaceEntities.SponsorData) internal sponsors;
+    mapping(address => MarketplaceEntities.EvaluatorData) internal evaluators;
 
     event MarketplaceConstructed(address currencyBank);
     event MemberJoined(MarketplaceEntities.Role role, string name, address address_);
@@ -57,11 +61,14 @@ contract MarketplaceApp is Ownable
         _;
     }
 
-    constructor(address currencyBank)
+    constructor(address token_)
     {
+        require(token_ != address(0), "Invalid token");
+        token = ERC20(token_);
+        
         // todo: other init
 
-        emit MarketplaceConstructed(currencyBank);
+        emit MarketplaceConstructed(token_);
     }
 
     function joinAsFreelancer(MarketplaceEntities.FreelancerData calldata data) 
