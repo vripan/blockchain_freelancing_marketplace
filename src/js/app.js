@@ -2,67 +2,62 @@ App = {
   web3Provider: null,
   contracts: {},
 
-  init: async function() {
-    // Load pets.
-    $.getJSON('../pets.json', function(data) {
-      var petsRow = $('#petsRow');
-      var petTemplate = $('#petTemplate');
-
-      for (i = 0; i < data.length; i ++) {
-        petTemplate.find('.panel-title').text(data[i].name);
-        petTemplate.find('img').attr('src', data[i].picture);
-        petTemplate.find('.pet-breed').text(data[i].breed);
-        petTemplate.find('.pet-age').text(data[i].age);
-        petTemplate.find('.pet-location').text(data[i].location);
-        petTemplate.find('.btn-adopt').attr('data-id', data[i].id);
-
-        petsRow.append(petTemplate.html());
-      }
-    });
-
+  init: async function () {
     return await App.initWeb3();
   },
 
-  initWeb3: async function() {
-    /*
-     * Replace me...
-     */
-
+  initWeb3: async function () {
+    if (typeof web3 !== 'undefined') {
+      App.web3Provider = web3.currentProvider;
+      web3 = new Web3(web3.currentProvider);
+      console.log("Web3 provided by metamask");
+    } else {
+      App.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
+      web3 = new Web3(App.web3Provider);
+      console.log("Web3 provided by localhost");
+    }
     return App.initContract();
   },
 
-  initContract: function() {
-    /*
-     * Replace me...
-     */
+  initContract: function () {
+    var loader = $("#loader");
+    var content = $("#content");
 
-    return App.bindEvents();
+    loader.show();
+    content.hide();
+
+    $.getJSON("MarketplaceApp.json", function (marketplace) {
+      App.contracts.Marketplace = TruffleContract(marketplace);
+      App.contracts.Marketplace.setProvider(App.web3Provider);
+    });
+
+    $.getJSON("Token.json", function (token) {
+      App.contracts.Token = TruffleContract(token);
+      App.contracts.Token.setProvider(App.web3Provider);
+    });
+
+    if (web3.currentProvider.enable) {
+      web3.currentProvider.enable().then(function (acc) {
+        App.account = acc[0];
+        balance = 0;
+
+        App.contracts.Token.deployed().then(function (tkn) {
+          tkn.balanceOf(App.account).then(function (balance) {
+            $("#accountAddress").html("Your Account: " + App.account + "<br> Balance: " + balance + " TKN");
+          })
+        })
+      });
+    } else {
+      $("#accountAddress").html("Provider not enabled");
+    }
+
+    loader.hide();
+    content.show();
   },
-
-  bindEvents: function() {
-    $(document).on('click', '.btn-adopt', App.handleAdopt);
-  },
-
-  markAdopted: function() {
-    /*
-     * Replace me...
-     */
-  },
-
-  handleAdopt: function(event) {
-    event.preventDefault();
-
-    var petId = parseInt($(event.target).data('id'));
-
-    /*
-     * Replace me...
-     */
-  }
-
 };
 
-$(function() {
-  $(window).load(function() {
+$(function () {
+  $(window).load(function () {
     App.init();
   });
 });

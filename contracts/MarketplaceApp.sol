@@ -157,7 +157,6 @@ contract MarketplaceApp is Ownable
         restrictedTo(MarketplaceEntities.Role.Freelancer)
         canApply(msg.sender, taskId)
     {
-
     }
 
     function hireFreelancer(uint taskId, address freelancer)
