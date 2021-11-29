@@ -8,3 +8,7 @@ https://www.dappuniversity.com/articles/the-ultimate-ethereum-dapp-tutorial
 - Truffle: https://github.com/trufflesuite/truffle
 - Ganache: http://truffleframework.com/ganache/
 - Metamask: https://metamask.io/
+- OpenZeppelin contracts:
+```
+npm install @openzeppelin/contracts
+```
