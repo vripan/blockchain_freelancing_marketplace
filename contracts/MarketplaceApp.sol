@@ -4,41 +4,66 @@ pragma solidity ^0.8.0;
 
 import "./Ownable.sol";
 import "./MarketplaceEntities.sol";
+import "./CategoryManager.sol";
+import "./RolesManager.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MarketplaceApp is Ownable
+contract MarketplaceApp is Ownable, CategoryManager, RolesManager
 {
     ERC20 internal token;
     
-    uint internal categoriesCount;
-    uint internal membersCount;
     uint internal tasksCount;
     
-    mapping(uint => string) internal categories;
-    mapping(uint => MarketplaceEntities.TaskData) internal tasks;
-    mapping(address => MarketplaceEntities.FreelancerData) internal freelancers;
-    mapping(address => MarketplaceEntities.ManagerData) internal maanger;
-    mapping(address => MarketplaceEntities.SponsorData) internal sponsors;
-    mapping(address => MarketplaceEntities.EvaluatorData) internal evaluators;
+    mapping(uint => MarketplaceEntities.TaskDataExtended) internal tasks;
 
-    event MarketplaceConstructed(address currencyBank);
-    event MemberJoined(MarketplaceEntities.Role role, string name, address address_);
-    event CategoryAdded(uint id, string name);
+    event MarketplaceConstructed(address currencyBank, address owner);
     event TaskAdded(address owner, string description, uint id);
+    event TaskRemoved(address owner, uint id);
+    event TaskSponsored(); // todo: update and call
+    event TaskFunded(); // todo: update and call
 
     uint constant TASK_NO_FREELANCERS_TIMEOUT_MS = 10000;
     uint constant TASK_NO_EVALUATOR_TIMEOUT_MS = 10000;
 
-    modifier restrictedTo(MarketplaceEntities.Role role)
+    enum Phase {
+        Zero, // Initializarea marketplace-ului 
+        One, // Crearea si finantarea unui nou task (NotFounded, Founded, Ready)
+        Two, // Aplicarea pentru realizarea unui task (Ready)
+        Three, // Executia taskului (Ready, WorkingOnIt, Finished, WaitingForEvaluation)
+        Four // Arbitrajul 
+    }
+
+    modifier at(Phase phase)
     {
-        // todo: this
         _;
     }
 
-    modifier taskState(uint taskId, address manager, MarketplaceEntities.TaskState state)
+    modifier restrictedTo(RolesManager.Role role)
     {
-        // todo: this (check task manager to be `manager`)
+        require(getRole(msg.sender) == role, "operation restricted for that role");
+        _;
+    }
+
+    modifier isValid(MarketplaceEntities.TaskData calldata data)
+    {
+        require(bytes(data.description).length > 0, "invalid description");
+        require(data.rewardFreelancer > 0, "invalid");
+        require(data.rewardEvaluator > 0, "invalid");
+        require(isValidCategoryId(data.category), "invalid");
+        _;
+    }
+
+    modifier taskInState(uint taskId, MarketplaceEntities.TaskState state)
+    {
+        require(taskId < tasksCount, "invalid");
+        require(tasks[taskId].state == state, "invalid");
+        _;
+    }
+
+    modifier restrictedToTaskManager(uint taskId)
+    {
+        require(tasks[taskId].manager == msg.sender, "invalid");
         _;
     }
 
@@ -51,13 +76,8 @@ contract MarketplaceApp is Ownable
 
     modifier canEvaluate(address evaluator, uint taskId)
     {
+        // remove this but make sure the code compile
         // todo: this (check same category)
-        _;
-    }
-
-    modifier canSponsor(address sponsor, uint taskId)
-    {
-        // todo: check task state
         _;
     }
 
@@ -66,105 +86,148 @@ contract MarketplaceApp is Ownable
         require(token_ != address(0), "Invalid token");
         token = ERC20(token_);
         
-        // todo: other init
-
-        emit MarketplaceConstructed(token_);
+        emit MarketplaceConstructed(token_, owner());
     }
 
-    function joinAsFreelancer(MarketplaceEntities.FreelancerData calldata data) 
-        public
+    function refundSponsors(uint taskId) 
+        internal
     {
-        // todo: register
-
-        emit MemberJoined(MarketplaceEntities.Role.Freelancer, data.name, msg.sender);
+        // todo: iterate sponsors and return money
+        // utils function 
+        // must be internal
     }
 
-    function joinAsManager(MarketplaceEntities.ManagerData calldata data) 
+    function addTask(MarketplaceEntities.TaskData calldata task)
         public
-    {
-        // todo: register
-
-        emit MemberJoined(MarketplaceEntities.Role.Manager, data.name, msg.sender);
-    }
-     
-     function joinAsSponsor(MarketplaceEntities.SponsorData calldata data) 
-        public
-    {
-        // todo: register
-
-        emit MemberJoined(MarketplaceEntities.Role.Sponsor, data.name, msg.sender);
-    }
-
-     function joinAsEvaluator(MarketplaceEntities.EvaluatorData calldata data) 
-        public
-    {
-        // todo: register
-
-        emit MemberJoined(MarketplaceEntities.Role.Evaluator, data.name, msg.sender);
-    }
-
-    function addCategory(string memory name)
-        public
-        restricted
+        at(Phase.One)
+        isValid(task)
+        restrictedTo(RolesManager.Role.Manager)
         returns (uint)
     {
-        // todo: index by incremental id
-        emit CategoryAdded(0, name);
-        return 0;
+        MarketplaceEntities.TaskDataExtended memory taskEx = new MarketplaceEntities.TaskDataExtended();
+        taskEx.data = task;
+        taskEx.manager = msg.sender;
+        taskEx.state = MarketplaceEntities.TaskState.NotFounded;
+        taskEx.readyTimestamp = 0;
+
+        uint taskId = tasksCount;
+        tasks[taskId] = taskEx;
+        tasksCount += 1;
+
+        emit TaskAdded(msg.sender, task.description, taskId);
+
+        return taskId;
     }
 
-    function addTask(MarketplaceEntities.TaskData calldata data)
-        public
-        restrictedTo(MarketplaceEntities.Role.Manager)
-        returns (uint)
-    {
-        // todo: index by incremental id
-        emit TaskAdded(msg.sender, data.description, 0);
-        return 0;
-    }
-
-    function removeTask(uint id)
+    function removeTask(uint taskId)
         public 
-        restrictedTo(MarketplaceEntities.Role.Manager)
+        at(Phase.One)
+        restrictedTo(RolesManager.Role.Manager)
+        restrictedToTaskManager(taskId)
+        taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
+        refundSponsors(taskId);
+        delete tasks[taskId];
+
+        emit TaskRemoved(msg.sender, taskId);
     }
 
     function sponsorTask(uint taskId, uint amount)
         public
-        restrictedTo(MarketplaceEntities.Role.Sponsor)
-        canSponsor(msg.sender, taskId)
+        at(Phase.One)
+        restrictedTo(RolesManager.Role.Sponsor)
+        taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
-        // transition from notFound to founded
+        uint amountAllowed = token.allowance(msg.sender, address(this));
+        require(amount > 0, "invalid sponsorship value");
+        require(amount <= amountAllowed, "invalid");
+    
+        SponsorshipInfo sponsorship = SponsorshipInfo();
+        sponsorship.sponsor = msg.sender;
+        sponsorship.amount = amount;
+        
+        // todo: check if this created a copy
+        TaskDataExtended task = tasks[taskId];
+
+        uint existingAmount = 0; 
+        uint targetAmount = task.data.rewardFreelancer + task.data.rewardEvaluator;
+        
+        // check for multiple sponsorhips from the same sponsor
+        // todo: maybe update old sponsorship value ?
+
+        for (uint i=0; i<task.sponsors.length; i++)
+        {
+            require(task.sponsors[i].sponsor != sponsorship.sponsor, "invalid");
+            existingAmount += task.sponsors[i].amount;
+        }
+    
+        // do not receive more than target amount
+        require(sponsorship.amount <= targetAmount - existingAmount, "invalid");
+        
+        token.transferFrom(sponsorship.sponsor, address(this), sponsorship.amount);
+        tasks[taskId].sponsors.push(sponsorship);
+
+        existingAmount += sponsorship.amount;
+
+        emit TaskSponsored();
+
+        if(existingAmount == sponsorship)
+        {
+            task.state = MarketplaceEntities.TaskState.Funded;
+            emit TaskFunded();
+        }
     }
 
     function withdrawSponsorship(uint taskId, uint amount)
         public
-        restrictedTo(MarketplaceEntities.Role.Sponsor)
+        at(Phase.One)
+        restrictedTo(RolesManager.Role.Sponsor)
     {
+        // 
     }
 
     function linkEvaluatorToTask(uint taskId, address evaluator)
         public
-        restrictedTo(MarketplaceEntities.Role.Manager)
-        taskState(taskId, msg.sender, MarketplaceEntities.TaskState.Funded)
+        at(Phase.One)
+        restrictedTo(RolesManager.Role.Manager)
+        taskInState(taskId, MarketplaceEntities.TaskState.Funded)
+        restrictedToTaskManager(taskId)
         canEvaluate(evaluator, taskId)
     {
-        // transition from founded to ready
+        // transition from funded to ready
     }
 
     function applyForTask(uint taskId)
         public
-        restrictedTo(MarketplaceEntities.Role.Freelancer)
+        at(Phase.Two)
+        restrictedTo(RolesManager.Role.Freelancer)
         canApply(msg.sender, taskId)
     {
+        // todo: this
     }
 
     function hireFreelancer(uint taskId, address freelancer)
         public
-        restrictedTo(MarketplaceEntities.Role.Manager)
-        taskState(taskId, msg.sender, MarketplaceEntities.TaskState.Ready)
+        at(Phase.Three)
+        restrictedTo(RolesManager.Role.Manager)
+        taskInState(taskId, MarketplaceEntities.TaskState.Ready)
+        restrictedToTaskManager(taskId)
     {
         // transition from ready to working on it
     }
 
+    function finishTask(uint taskId)
+        public
+        at(Phase.Three)
+        restrictedTo(RolesManager.Role.Freelancer)
+    {
+        // transition from working on it to finished
+    }
+
+    function checkTask(uint taskId)
+        public
+        at(Phase.Three)
+    {
+        // transition from finished to accepted or WaitingForEvaluation
+    }
 }

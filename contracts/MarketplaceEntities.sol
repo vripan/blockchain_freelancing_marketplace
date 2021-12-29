@@ -10,7 +10,7 @@ library MarketplaceEntities
         uint amount;
     }
 
-    enum TaskState { NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted }
+    enum TaskState { NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted, WaitingForEvaluation, AcceptedByEvaluator, RejectedByEvaluator}
 
     struct TaskData
     {
@@ -18,42 +18,15 @@ library MarketplaceEntities
         uint rewardFreelancer;
         uint rewardEvaluator;
         uint category;
+    }
+
+    struct TaskDataExtended
+    {
+        TaskData data;
         address manager;
         SponsorshipInfo[] sponsors;
         address[] freelancers;
         TaskState state;
         uint256 readyTimestamp;
-    }
-
-    struct FreelancerData
-    {
-        string name;
-        uint categoryId;
-        uint8 rep;
-    }
-
-    struct ManagerData
-    {
-        string name;
-    }
-
-    struct SponsorData
-    {
-        string name;
-    }
-
-    struct EvaluatorData
-    {
-        string name;
-        uint categoryId;
-    }
-
-    enum Role { Freelancer, Manager, Sponsor, Evaluator }
-    function StringifiedRole(Role role) 
-        public 
-        pure
-        returns (string memory)
-    {
-        // todo: this
     }
 }
