@@ -29,7 +29,8 @@ contract RolesManager is Ownable
     }
 
     enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
-    
+
+    mapping(address => Role) internal roles;
 
     mapping(address => FreelancerData) internal freelancers;
     mapping(address => ManagerData) internal managers;
