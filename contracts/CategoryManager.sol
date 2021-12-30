@@ -47,4 +47,12 @@ contract CategoryManager is Ownable
     {
         return id < nextId;
     }
+
+    function getCategoriesCount()
+        public
+        view
+        returns(uint)
+    {
+        return nextId;
+    }
 }
