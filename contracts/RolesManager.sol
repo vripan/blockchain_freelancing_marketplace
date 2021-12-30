@@ -80,6 +80,15 @@ contract RolesManager is Ownable
         emit MemberJoined(Role.Evaluator, data.name, msg.sender);
     }
 
+    function getEvaluatorInfo(address _address) 
+        public
+        view 
+        returns(EvaluatorData memory)
+    {
+        assert(getRole(_address) == Role.Evaluator);
+        return evaluators[_address];
+    }
+
     function getRole(address address_) 
         public 
         view 

@@ -26,6 +26,7 @@ library MarketplaceEntities
         address manager;
         SponsorshipInfo[] sponsors;
         address[] freelancers;
+        address evaluator;
         TaskState state;
         uint256 readyTimestamp;
     }
