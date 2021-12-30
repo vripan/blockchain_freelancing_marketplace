@@ -11,4 +11,5 @@ https://www.dappuniversity.com/articles/the-ultimate-ethereum-dapp-tutorial
 - OpenZeppelin contracts:
 ```
 npm install @openzeppelin/contracts
+npm install truffle-assertions
 ```

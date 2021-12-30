@@ -37,6 +37,7 @@ contract CategoryManager is Ownable
         view
         returns(string memory)
     {
+        require(isValidCategoryId(id), "invalid id");
         return categories[id];
     }
 
