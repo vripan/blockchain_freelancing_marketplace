@@ -60,7 +60,7 @@ contract MarketplaceApp is Ownable, CategoryManager, RolesManager
         emit MarketplaceConstructed(token_, owner());
     }
 
-    function refundSponsors(uint taskId) 
+    function refundSponsors(uint taskId)
         internal
     {
         // todo: iterate sponsors and return money
@@ -184,9 +184,9 @@ contract MarketplaceApp is Ownable, CategoryManager, RolesManager
         
         require(getRole(evaluator) == Role.Evaluator, "invalid");
         
-        EvaluatorData memory info = getEvaluatorInfo(evaluator);
+        EvaluatorDataExtended memory info = getEvaluatorInfo(evaluator);
 
-        require(info.categoryId ==  tasks[taskId].data.category, "invalid");
+        require(info.data.categoryId ==  tasks[taskId].data.category, "invalid");
 
         tasks[taskId].evaluator = evaluator;
     }

@@ -9,7 +9,12 @@ contract RolesManager is Ownable
     {
         string name;
         uint categoryId;
-        uint8 rep; // constrained to interval [1, 10]
+    }
+
+    struct FreelancerDataExtended
+    {
+        FreelancerData data;
+        uint8 rep; // constrained to interval [1, 10] -> initial setata la 5
     }
 
     struct ManagerData
@@ -17,9 +22,19 @@ contract RolesManager is Ownable
         string name;
     }
 
+    struct ManagerDataExtended
+    {
+        ManagerData data;
+    }
+
     struct SponsorData
     {
         string name;
+    }
+
+    struct SponsorDataExtended
+    {
+        SponsorData data;
     }
 
     struct EvaluatorData
@@ -28,76 +43,130 @@ contract RolesManager is Ownable
         uint categoryId;
     }
 
+    struct EvaluatorDataExtended
+    {
+        EvaluatorData data;
+    }
+
     enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
 
     mapping(address => Role) internal roles;
 
-    mapping(address => FreelancerData) internal freelancers;
-    mapping(address => ManagerData) internal managers;
-    mapping(address => SponsorData) internal sponsors;
-    mapping(address => EvaluatorData) internal evaluators;
+    mapping(address => FreelancerDataExtended) internal freelancers;
+    mapping(address => ManagerDataExtended) internal managers;
+    mapping(address => SponsorDataExtended) internal sponsors;
+    mapping(address => EvaluatorDataExtended) internal evaluators;
 
-    uint internal membersCount;
+    uint internal membersCount = 0;
 
     event MemberJoined(Role role, string name, address address_);
 
-    function StringifiedRole(Role role) 
-        public 
+    modifier notJoined()
+    {
+        require(roles[msg.sender] == Role.Unknown, "Already joined!");
+        _;
+    }
+
+    function StringifiedRole(Role _role) 
+        public
         pure
         returns (string memory)
     {
-        // todo: this
+        return 
+            _role == Role.Freelancer ? "Freelancer" :
+            _role == Role.Manager ? "Manager" :
+            _role == Role.Sponsor ? "Sponsor" :
+            _role == Role.Evaluator ? "Evaluator" :
+            "Unknown";
     }
 
-    function joinAsFreelancer(FreelancerData calldata data) 
-        public
+    function joinAsFreelancer(FreelancerData calldata _data) 
+        external
+        notJoined
     {
-        // todo: register
+        require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        emit MemberJoined(Role.Freelancer, data.name, msg.sender);
+        //todo: maybe add calldata validators for each role?
+        //todo: validate category?
+        roles[msg.sender] = Role.Freelancer;
+        freelancers[msg.sender] = FreelancerDataExtended(
+            {
+                data : _data,
+                rep : 5
+            }
+        );
+
+        membersCount++;
+        emit MemberJoined(Role.Freelancer, _data.name, msg.sender);
     }
 
-    function joinAsManager(ManagerData calldata data) 
-        public
+    function joinAsManager(ManagerData calldata _data) 
+        external
+        notJoined
     {
-        // todo: register
+        require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        emit MemberJoined(Role.Manager, data.name, msg.sender);
+        roles[msg.sender] = Role.Manager;
+        managers[msg.sender] = ManagerDataExtended(
+            {
+                data : _data
+            }
+        );
+
+        membersCount++;
+        emit MemberJoined(Role.Manager, _data.name, msg.sender);
     }
      
-    function joinAsSponsor(SponsorData calldata data) 
-        public
+    function joinAsSponsor(SponsorData calldata _data) 
+        external
+        notJoined
     {
-        // todo: register
+        require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        emit MemberJoined(Role.Sponsor, data.name, msg.sender);
+        roles[msg.sender] = Role.Sponsor;
+        sponsors[msg.sender] = SponsorDataExtended(
+            {
+                data : _data
+            }
+        );
+
+        membersCount++;
+        emit MemberJoined(Role.Sponsor, _data.name, msg.sender);
     }
 
-    function joinAsEvaluator(EvaluatorData calldata data) 
-        public
+    function joinAsEvaluator(EvaluatorData calldata _data) 
+        external
+        notJoined
     {
-        // todo: register
+        require(bytes(_data.name).length != 0, "Name can not be empty!");
+        //todo: validate category?
+        
+        roles[msg.sender] = Role.Evaluator;
+        evaluators[msg.sender] = EvaluatorDataExtended(
+            {
+                data : _data
+            }
+        );
 
-        emit MemberJoined(Role.Evaluator, data.name, msg.sender);
+        membersCount++;
+        emit MemberJoined(Role.Evaluator, _data.name, msg.sender);
     }
 
     function getEvaluatorInfo(address _address) 
         public
         view 
-        returns(EvaluatorData memory)
+        returns(EvaluatorDataExtended memory)
     {
         assert(getRole(_address) == Role.Evaluator);
         return evaluators[_address];
     }
 
-    function getRole(address address_) 
+    function getRole(address _address) 
         public 
         view 
         returns(Role)
     {
-        // todo: get role
-
-        return Role.Unknown;
+        return roles[_address];
     }
 
     function getMembersCount()
@@ -105,7 +174,7 @@ contract RolesManager is Ownable
         view
         returns(uint)
     {
-        return 0;
+        return membersCount;
     }
 
 
