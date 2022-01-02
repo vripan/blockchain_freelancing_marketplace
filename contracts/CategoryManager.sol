@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "./Ownable.sol";
 
-contract CategoryManager is Ownable 
+contract CategoryManager
 {
     uint internal nextId;
     mapping(uint => string) internal categories;
@@ -17,7 +16,6 @@ contract CategoryManager is Ownable
 
     function addCategory(string memory name)
         public
-        restricted
         returns (uint)
     {
         bytes memory nameBytes = bytes(name);

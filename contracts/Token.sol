@@ -22,9 +22,17 @@ contract Token is ERC20 {
         return _decimals;
     }
 
-    function openFaucet() 
+    function mintAmount() 
+        public
+        pure
+        returns(uint)
+    {
+        return _dripAmount * (10 ** _decimals);
+    }
+
+    function mint() 
         public
     {
-        _mint(msg.sender, _dripAmount * (10 ** _decimals));
+        _mint(msg.sender, mintAmount());
     }
 }

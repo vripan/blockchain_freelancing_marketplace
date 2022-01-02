@@ -1,6 +1,6 @@
 const Marketplace = artifacts.require("MarketplaceApp")
 const truffleAssert = require('truffle-assertions');
-
+return;
 contract("CategoryManager", accounts => {
     it("should be able to add categories", async () => {
         marketplace = await Marketplace.deployed();

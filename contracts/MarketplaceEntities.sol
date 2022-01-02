@@ -10,7 +10,7 @@ library MarketplaceEntities
         uint amount;
     }
 
-    enum TaskState { NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted, WaitingForEvaluation, AcceptedByEvaluator, RejectedByEvaluator}
+    enum TaskState { NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted, WaitingForEvaluation, AcceptedByEvaluator, RejectedByEvaluator, TimeoutOnHiring, TimeoutOnEvaluation}
 
     struct TaskData
     {

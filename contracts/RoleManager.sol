@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "./Ownable.sol";
+import "./CategoryManager.sol";
 
-contract RolesManager is Ownable 
+contract RoleManager 
 {
     struct FreelancerData
     {
@@ -14,7 +14,7 @@ contract RolesManager is Ownable
     struct FreelancerDataExtended
     {
         FreelancerData data;
-        uint8 rep; // constrained to interval [1, 10] -> initial setata la 5
+        uint8 rep;
     }
 
     struct ManagerData
@@ -58,16 +58,23 @@ contract RolesManager is Ownable
     mapping(address => EvaluatorDataExtended) internal evaluators;
 
     uint internal membersCount = 0;
+    CategoryManager categoryManager;
 
     event MemberJoined(Role role, string name, address address_);
 
-    modifier notJoined()
+    modifier notJoined(address address_)
     {
-        require(roles[msg.sender] == Role.Unknown, "Already joined!");
+        require(roles[address_] == Role.Unknown, "Already joined!");
         _;
     }
 
-    function StringifiedRole(Role _role) 
+    constructor(address categoryManager_)
+    {
+        require(categoryManager_ != address(0), "invalid address");
+        categoryManager = CategoryManager(categoryManager_);
+    }
+
+    function stringifiedRole(Role _role) 
         public
         pure
         returns (string memory)
@@ -80,16 +87,15 @@ contract RolesManager is Ownable
             "Unknown";
     }
 
-    function joinAsFreelancer(FreelancerData calldata _data) 
-        external
-        notJoined
+    function joinAsFreelancer(address address_, FreelancerData calldata _data) 
+        public
+        notJoined(address_)
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
-
-        //todo: maybe add calldata validators for each role?
-        //todo: validate category?
-        roles[msg.sender] = Role.Freelancer;
-        freelancers[msg.sender] = FreelancerDataExtended(
+        require(categoryManager.isValidCategoryId(_data.categoryId), "invalid category id");
+        
+        roles[address_] = Role.Freelancer;
+        freelancers[address_] = FreelancerDataExtended(
             {
                 data : _data,
                 rep : 5
@@ -97,59 +103,59 @@ contract RolesManager is Ownable
         );
 
         membersCount++;
-        emit MemberJoined(Role.Freelancer, _data.name, msg.sender);
+        emit MemberJoined(Role.Freelancer, _data.name, address_);
     }
 
-    function joinAsManager(ManagerData calldata _data) 
-        external
-        notJoined
+    function joinAsManager(address address_, ManagerData calldata _data) 
+        public
+        notJoined(address_)
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        roles[msg.sender] = Role.Manager;
-        managers[msg.sender] = ManagerDataExtended(
+        roles[address_] = Role.Manager;
+        managers[address_] = ManagerDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Manager, _data.name, msg.sender);
+        emit MemberJoined(Role.Manager, _data.name, address_);
     }
      
-    function joinAsSponsor(SponsorData calldata _data) 
-        external
-        notJoined
+    function joinAsSponsor(address address_, SponsorData calldata _data) 
+        public
+        notJoined(address_)
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        roles[msg.sender] = Role.Sponsor;
-        sponsors[msg.sender] = SponsorDataExtended(
+        roles[address_] = Role.Sponsor;
+        sponsors[address_] = SponsorDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Sponsor, _data.name, msg.sender);
+        emit MemberJoined(Role.Sponsor, _data.name, address_);
     }
 
-    function joinAsEvaluator(EvaluatorData calldata _data) 
-        external
-        notJoined
+    function joinAsEvaluator(address address_, EvaluatorData calldata _data) 
+        public
+        notJoined(address_)
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
-        //todo: validate category?
+        require(categoryManager.isValidCategoryId(_data.categoryId), "invalid");
         
-        roles[msg.sender] = Role.Evaluator;
-        evaluators[msg.sender] = EvaluatorDataExtended(
+        roles[address_] = Role.Evaluator;
+        evaluators[address_] = EvaluatorDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Evaluator, _data.name, msg.sender);
+        emit MemberJoined(Role.Evaluator, _data.name, address_);
     }
 
     function getEvaluatorInfo(address _address) 
@@ -176,6 +182,4 @@ contract RolesManager is Ownable
     {
         return membersCount;
     }
-
-
 }
