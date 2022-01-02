@@ -8,26 +8,19 @@ import "./CategoryManager.sol";
 import "./RoleManager.sol";
 import "./TaskManager.sol";
 
-import "./openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MarketplaceApp is Ownable
 {
     CategoryManager internal categoryManager;
     RoleManager internal roleManager;
     TaskManager internal taskManager;
-    ERC20 internal token;
 
-    event MarketplaceConstructed(address currencyBank, address owner);
-    constructor(address token_)
+    constructor(address categoryManager_, address roleManager_, address taskManager_)
     {
-        require(token_ != address(0), "Invalid token");
-        token = ERC20(token_);
-
-        categoryManager = new CategoryManager();
-        roleManager = new RoleManager(address(categoryManager));
-        taskManager = new TaskManager(address(categoryManager), address(roleManager), token);
-
-        emit MarketplaceConstructed(token_, owner());
+        categoryManager = CategoryManager(categoryManager_);
+        roleManager = RoleManager(roleManager_);
+        taskManager = TaskManager(taskManager_);
     }
 
     function addCategory(string memory name) public restricted returns(uint) 
@@ -98,7 +91,50 @@ contract MarketplaceApp is Ownable
         return roleManager.getMembersCount();
     }
 
-   
+     function addTask(MarketplaceEntities.TaskData calldata task)
+        public
+        returns (uint)
+    {
+        return taskManager.addTask(msg.sender, task);
+    }
+
+    function removeTask(uint taskId)
+        public 
+    {
+        taskManager.removeTask(msg.sender, taskId);
+    }
+
+    function sponsorTask(uint taskId, uint amount)
+        public
+    {
+        taskManager.sponsorTask(msg.sender, taskId, amount);
+    }
+
+    function withdrawSponsorship(uint taskId)
+        public
+    {
+       taskManager.withdrawSponsorship(msg.sender, taskId);
+    }
+
+    function linkEvaluatorToTask(uint taskId, address evaluator)
+        public
+    {
+        taskManager.linkEvaluatorToTask(msg.sender, taskId, evaluator);
+    }
+
+    function checkHireTimeout(uint taskId)
+        public
+    {
+        taskManager.checkHireTimeout(taskId);
+    }
+
+    function getTasksCount() 
+        public 
+        view
+        returns(uint)
+    {
+        return taskManager.getTasksCount();
+    }
 
     // function applyForTask(uint taskId)
     //     public

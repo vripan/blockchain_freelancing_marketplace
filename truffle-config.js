@@ -14,8 +14,9 @@ module.exports = {
       version: "0.8.7",
       optimizer: {
             enabled: true,
-            runs: 200
+            runs: 1
       }
     }
-  }
+  },
+  plugins: ["truffle-contract-size"]
 };

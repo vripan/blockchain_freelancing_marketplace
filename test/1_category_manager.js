@@ -1,14 +1,15 @@
 const Marketplace = artifacts.require("MarketplaceApp")
+const CategoryManager = artifacts.require("CategoryManager")
 const truffleAssert = require('truffle-assertions');
-return;
+
 contract("CategoryManager", accounts => {
     it("should be able to add categories", async () => {
-        marketplace = await Marketplace.deployed();
+        marketplace =  await CategoryManager.deployed()
 
         checkAddCategory = async function (marketplace, name, expectedId) {
             tx = await marketplace.addCategory(name);
             truffleAssert.eventEmitted(tx, 'CategoryAdded', ev => ev.id == expectedId && ev.name == name);
-        }
+        } 
 
         categoriesCount = await marketplace.getCategoriesCount();
         assert.equal(categoriesCount.toNumber(), 0, "invalid init");

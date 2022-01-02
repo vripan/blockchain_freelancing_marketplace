@@ -12,4 +12,5 @@ https://www.dappuniversity.com/articles/the-ultimate-ethereum-dapp-tutorial
 ```
 npm install @openzeppelin/contracts
 npm install truffle-assertions
+npm install truffle-contract-size
 ```

@@ -1,110 +1,105 @@
 const Marketplace = artifacts.require("MarketplaceApp")
+const RoleManager = artifacts.require("RoleManager")
+const CategoryManager = artifacts.require("CategoryManager");
 const truffleAssert = require('truffle-assertions');
-return;
+
 contract("RoleManager", accounts => {
     it("should have zero members on init", async () => {
-        marketplace = await Marketplace.deployed();
+        roleManager = await RoleManager.deployed();
+        categoryManager = await CategoryManager.deployed();
 
-        membersCount = await marketplace.getMembersCount();
+        membersCount = await roleManager.getMembersCount();
         assert.equal(membersCount.toNumber(), 0, "invalid");
 
-        tx = await marketplace.addCategory("alfa");
-        categoriesCount = await marketplace.getCategoriesCount();
+        tx = await categoryManager.addCategory("alfa");
+        categoriesCount = await categoryManager.getCategoriesCount();
         assert.equal(categoriesCount.toNumber(), 1, "invalid");
     });
     it("should not allow a member join multiple times", async () => {
-        marketplace = await Marketplace.deployed();
+        initalMembersCount = await roleManager.getMembersCount();
 
-        initalMembersCount = await marketplace.getMembersCount();
-
-        tx = await marketplace.joinAsFreelancer({ name: "F1", categoryId: 0 }, {from: accounts[0]});
+        tx = await roleManager.joinAsFreelancer(accounts[0], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[0]
         });
         
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
 
         await truffleAssert.fails(
-            marketplace.joinAsFreelancer({ name: "F1", categoryId: 0 }, {from: accounts[0]}),
+            roleManager.joinAsFreelancer(accounts[0], { name: "F1", categoryId: 0 }),
             truffleAssert.ErrorType.REVERT
         )
 
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
     });
     it("should not allow a member join multiple roles", async () => {
-        marketplace = await Marketplace.deployed();
+        initalMembersCount = await roleManager.getMembersCount();
 
-        initalMembersCount = await marketplace.getMembersCount();
-
-        tx = await marketplace.joinAsFreelancer({ name: "F1", categoryId: 0 }, {from: accounts[1]});
+        tx = await roleManager.joinAsFreelancer(accounts[1], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[1]
         });
         
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
 
         await truffleAssert.fails(
-            marketplace.joinAsManager({ name: "F1" }, {from: accounts[1]}),
+            roleManager.joinAsManager(accounts[1], { name: "F1" }),
             truffleAssert.ErrorType.REVERT
         )
 
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
     });
     it("should not allow a member to join with an invalid category specialization", async () => {
-        marketplace = await Marketplace.deployed();
-
-        initalMembersCount = await marketplace.getMembersCount();
+        initalMembersCount = await roleManager.getMembersCount();
 
         await truffleAssert.fails(
-            marketplace.joinAsFreelancer({ name: "F1", categoryId: 99 }, {from: accounts[2]}),
+            roleManager.joinAsFreelancer(accounts[2], { name: "F1", categoryId: 99 }),
             truffleAssert.ErrorType.REVERT
         );
 
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber(), "invalid");
     });
     it("should be able to join", async () => {
-        marketplace = await Marketplace.deployed();
+        initalMembersCount = await roleManager.getMembersCount();
 
-        initalMembersCount = await marketplace.getMembersCount();
-
-        tx = await marketplace.joinAsFreelancer({ name: "F1", categoryId: 0 }, {from: accounts[3]});
+        tx = await roleManager.joinAsFreelancer(accounts[3], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[3]
         });
 
-        tx = await marketplace.joinAsManager({ name: "F1", categoryId: 0 }, {from: accounts[4]});
+        tx = await roleManager.joinAsManager(accounts[4], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 2
                 && ev.name == "F1"
                 && ev.address_ == accounts[4]
         });
 
-        tx = await marketplace.joinAsSponsor({ name: "F1", categoryId: 0 }, {from: accounts[5]});
+        tx = await roleManager.joinAsSponsor(accounts[5], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 3
                 && ev.name == "F1"
                 && ev.address_ == accounts[5]
         });
 
-        tx = await marketplace.joinAsEvaluator({ name: "F1", categoryId: 0 }, {from: accounts[6]});
+        tx = await roleManager.joinAsEvaluator(accounts[6], { name: "F1", categoryId: 0 });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 4
                 && ev.name == "F1"
                 && ev.address_ == accounts[6]
         });
 
-        latestMembersCount = await marketplace.getMembersCount();
+        latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 4, "invalid");
     });
 });

@@ -10,7 +10,7 @@ library MarketplaceEntities
         uint amount;
     }
 
-    enum TaskState { NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted, WaitingForEvaluation, AcceptedByEvaluator, RejectedByEvaluator, TimeoutOnHiring, TimeoutOnEvaluation}
+    enum TaskState { Unknown, NotFounded, Funded, Ready, WorkingOnIt, Finished, Accepted, WaitingForEvaluation, AcceptedByEvaluator, RejectedByEvaluator, TimeoutOnHiring, TimeoutOnEvaluation}
 
     struct TaskData
     {
@@ -29,5 +29,24 @@ library MarketplaceEntities
         address evaluator;
         TaskState state;
         uint256 readyTimestamp;
+    }
+
+    event TaskAdded(address owner, string description, uint id);
+    event TaskRemoved(address owner, uint taskId);
+    event SponsorshipWidrawed(uint taskId, address sponsor, uint amount);
+    event TaskSponsored(uint taskId, address sponsor, uint amount);
+    event TaskFunded(uint taskId);
+    event TaskReady(uint taskId, address evaluator);
+    event TaskHiringTimeout(uint taskId);
+    function deleteFromArray(SponsorshipInfo[] storage array, uint index)
+        public
+    {
+        unchecked {
+            for(uint shIdx = index; shIdx < array.length - 1; shIdx++)
+            {
+                array[shIdx] = array[shIdx + 1];
+            }
+            array.pop();
+        }
     }
 }

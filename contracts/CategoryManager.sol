@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-contract CategoryManager
+import "./Ownable.sol";
+contract CategoryManager is Ownable
 {
     uint internal nextId;
     mapping(uint => string) internal categories;
@@ -16,6 +17,7 @@ contract CategoryManager
 
     function addCategory(string memory name)
         public
+        restricted
         returns (uint)
     {
         bytes memory nameBytes = bytes(name);
