@@ -19,19 +19,19 @@ App = {
     return App.initContract();
   },
 
-  initContract: function () {
+  initContract: async function () {
     var loader = $("#loader");
     var content = $("#content");
 
     loader.show();
     content.hide();
 
-    $.getJSON("MarketplaceApp.json", function (marketplace) {
-      App.contracts.Marketplace = TruffleContract(marketplace);
-      App.contracts.Marketplace.setProvider(App.web3Provider);
+    await $.getJSON("TaskManager.json", function (marketplace) {
+      App.contracts.TaskManager = TruffleContract(marketplace);
+      App.contracts.TaskManager.setProvider(App.web3Provider);
     });
 
-    $.getJSON("Token.json", function (token) {
+    await $.getJSON("Token.json", function (token) {
       App.contracts.Token = TruffleContract(token);
       App.contracts.Token.setProvider(App.web3Provider);
     });
