@@ -160,12 +160,6 @@ contract TaskManager
                 token.transfer(task.sponsors[i].sponsor, task.sponsors[i].amount);
                 
                 MarketplaceEntities.deleteFromArray(tasks[taskId].sponsors, i);
-                // move all elements to cover the gap
-                // for(uint shIdx = i; shIdx < task.sponsors.length - 1; shIdx++)
-                // {
-                //     task.sponsors[shIdx] = task.sponsors[shIdx + 1];
-                // }
-                // tasks[taskId].sponsors.pop();
 
                 emit MarketplaceEntities.SponsorshipWidrawed(taskId, task.sponsors[i].sponsor, task.sponsors[i].amount);
                 return;
