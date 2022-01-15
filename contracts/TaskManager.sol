@@ -22,9 +22,9 @@ contract TaskManager
     uint constant TASK_NO_FREELANCERS_TIMEOUT_SECONDS = 10;
     uint constant TASK_NO_EVALUATOR_TIMEOUT_SECONDS = 10;
 
-    modifier restrictedTo(address sender, RoleManager.Role role)
+    modifier restrictedTo(RoleManager.Role role)
     {
-        require(roleManager.getRole(sender) == role, "operation restricted for that role");
+        require(roleManager.getRole(msg.sender) == role, "operation restricted for that role");
         _;
     }
 
@@ -37,9 +37,9 @@ contract TaskManager
         _;
     }
 
-    modifier restrictedToTaskManager(address sender, uint taskId)
+    modifier restrictedToTaskManager(uint taskId)
     {
-        require(tasks[taskId].manager == sender, "invalid");
+        require(tasks[taskId].manager == msg.sender, "invalid");
         _;
     }
 
@@ -63,58 +63,62 @@ contract TaskManager
             tasks[taskId].sponsors.pop();
         }
     }
-
-    function addTask(address sender, MarketplaceEntities.TaskData calldata task)
+    
+    /**
+    * @dev Add task to manager
+    * @param _task External task data
+    */
+    function addTask(MarketplaceEntities.TaskData calldata _task)
         public
-        restrictedTo(sender, RoleManager.Role.Manager)
+        restrictedTo(RoleManager.Role.Manager)
         returns (uint)
     {
-        require(bytes(task.description).length > 0, "E01");
-        require(task.rewardFreelancer > 0, "E02");
-        require(task.rewardEvaluator > 0, "E03");
-        require(categoryManager.isValidCategoryId(task.category), "E04");
+        require(bytes(_task.description).length > 0, "E01");
+        require(_task.rewardFreelancer > 0, "E02");
+        require(_task.rewardEvaluator > 0, "E03");
+        require(categoryManager.isValidCategoryId(_task.category), "E04");
         
         uint taskId = nextTaskId;
         MarketplaceEntities.TaskDataExtended storage taskEx = tasks[taskId];
         
-        taskEx.data = task;
-        taskEx.manager = sender;
+        taskEx.data = _task;
+        taskEx.manager = msg.sender;
         taskEx.state = MarketplaceEntities.TaskState.NotFounded;
         taskEx.readyTimestamp = 0;
 
         nextTaskId += 1;
         tasksCount += 1;
 
-        emit MarketplaceEntities.TaskAdded(sender, task.description, taskId);
+        emit MarketplaceEntities.TaskAdded(msg.sender, _task.description, taskId);
 
         return taskId;
     }
 
-    function removeTask(address sender, uint taskId)
+    function removeTask(uint taskId)
         public 
-        restrictedToTaskManager(sender, taskId)
+        restrictedToTaskManager(taskId)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
         refundSponsors(taskId);
         delete tasks[taskId];
         tasksCount -= 1;
 
-        emit MarketplaceEntities.TaskRemoved(sender, taskId);
+        emit MarketplaceEntities.TaskRemoved(msg.sender, taskId);
     }
 
-    function sponsorTask(address sender, uint taskId, uint amount)
+    function sponsorTask(uint taskId, uint amount)
         public
-        restrictedTo(sender, RoleManager.Role.Sponsor)
+        restrictedTo(RoleManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
-        uint amountAllowed = token.allowance(sender, address(this));
-        uint senderBalance = token.balanceOf(sender);
+        uint amountAllowed = token.allowance(msg.sender, address(this));
+        uint senderBalance = token.balanceOf(msg.sender);
         require(amount > 0, "E05");
         require(amountAllowed <= senderBalance, "E06");
         require(amount <= amountAllowed, "E07");
     
         MarketplaceEntities.SponsorshipInfo memory sponsorship;
-        sponsorship.sponsor = sender;
+        sponsorship.sponsor = msg.sender;
         sponsorship.amount = amount;
         
         MarketplaceEntities.TaskDataExtended memory task = tasks[taskId];
@@ -137,7 +141,7 @@ contract TaskManager
 
         existingAmount += sponsorship.amount;
 
-        emit MarketplaceEntities.TaskSponsored(taskId, sender, amount);
+        emit MarketplaceEntities.TaskSponsored(taskId, msg.sender, amount);
 
         if(existingAmount == targetAmount)
         {
@@ -146,16 +150,16 @@ contract TaskManager
         }
     }
 
-    function withdrawSponsorship(address sender, uint taskId)
+    function withdrawSponsorship(uint taskId)
         public
-        restrictedTo(sender, RoleManager.Role.Sponsor)
+        restrictedTo(RoleManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
          MarketplaceEntities.TaskDataExtended memory task = tasks[taskId];
 
          for(uint i=0; i<task.sponsors.length; i++)
          {
-            if(task.sponsors[i].sponsor == sender)
+            if(task.sponsors[i].sponsor == msg.sender)
             {
                 token.transfer(task.sponsors[i].sponsor, task.sponsors[i].amount);
                 
@@ -168,9 +172,9 @@ contract TaskManager
          revert();
     }
 
-    function linkEvaluatorToTask(address sender, uint taskId, address evaluator)
+    function linkEvaluatorToTask(uint taskId, address evaluator)
         public
-        restrictedToTaskManager(sender, taskId)
+        restrictedToTaskManager(taskId)
         taskInState(taskId, MarketplaceEntities.TaskState.Funded)
     {
         assert(tasks[taskId].evaluator == address(0));

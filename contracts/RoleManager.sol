@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 import "./CategoryManager.sol";
 
-contract RoleManager 
+library RoleData 
 {
     struct FreelancerData
     {
@@ -48,23 +48,27 @@ contract RoleManager
         EvaluatorData data;
     }
 
-    enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
+}
 
-    mapping(address => Role) internal roles;
-
-    mapping(address => FreelancerDataExtended) internal freelancers;
-    mapping(address => ManagerDataExtended) internal managers;
-    mapping(address => SponsorDataExtended) internal sponsors;
-    mapping(address => EvaluatorDataExtended) internal evaluators;
-
+contract RoleManager 
+{
     uint internal membersCount = 0;
     CategoryManager categoryManager;
 
+    mapping(address => Role) internal roles;
+
+    mapping(address => RoleData.FreelancerDataExtended) internal freelancers;
+    mapping(address => RoleData.ManagerDataExtended) internal managers;
+    mapping(address => RoleData.SponsorDataExtended) internal sponsors;
+    mapping(address => RoleData.EvaluatorDataExtended) internal evaluators;
+
+    enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
+    
     event MemberJoined(Role role, string name, address address_);
 
-    modifier notJoined(address address_)
+    modifier notJoined()
     {
-        require(roles[address_] == Role.Unknown, "Already joined!");
+        require(roles[msg.sender] == Role.Unknown, "Already joined!");
         _;
     }
 
@@ -75,7 +79,7 @@ contract RoleManager
     }
 
     function stringifiedRole(Role _role) 
-        public
+        external
         pure
         returns (string memory)
     {
@@ -87,15 +91,15 @@ contract RoleManager
             "Unknown";
     }
 
-    function joinAsFreelancer(address address_, FreelancerData calldata _data) 
-        public
-        notJoined(address_)
+    function joinAsFreelancer(RoleData.FreelancerData calldata _data) 
+        external
+        notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
         require(categoryManager.isValidCategoryId(_data.categoryId), "invalid category id");
         
-        roles[address_] = Role.Freelancer;
-        freelancers[address_] = FreelancerDataExtended(
+        roles[msg.sender] = Role.Freelancer;
+        freelancers[msg.sender] = RoleData.FreelancerDataExtended(
             {
                 data : _data,
                 rep : 5
@@ -103,65 +107,65 @@ contract RoleManager
         );
 
         membersCount++;
-        emit MemberJoined(Role.Freelancer, _data.name, address_);
+        emit MemberJoined(Role.Freelancer, _data.name, msg.sender);
     }
 
-    function joinAsManager(address address_, ManagerData calldata _data) 
-        public
-        notJoined(address_)
+    function joinAsManager(RoleData.ManagerData calldata _data) 
+        external
+        notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        roles[address_] = Role.Manager;
-        managers[address_] = ManagerDataExtended(
+        roles[msg.sender] = Role.Manager;
+        managers[msg.sender] = RoleData.ManagerDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Manager, _data.name, address_);
+        emit MemberJoined(Role.Manager, _data.name, msg.sender);
     }
      
-    function joinAsSponsor(address address_, SponsorData calldata _data) 
-        public
-        notJoined(address_)
+    function joinAsSponsor(RoleData.SponsorData calldata _data) 
+        external
+        notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
-        roles[address_] = Role.Sponsor;
-        sponsors[address_] = SponsorDataExtended(
+        roles[msg.sender] = Role.Sponsor;
+        sponsors[msg.sender] = RoleData.SponsorDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Sponsor, _data.name, address_);
+        emit MemberJoined(Role.Sponsor, _data.name, msg.sender);
     }
 
-    function joinAsEvaluator(address address_, EvaluatorData calldata _data) 
-        public
-        notJoined(address_)
+    function joinAsEvaluator(RoleData.EvaluatorData calldata _data) 
+        external
+        notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
         require(categoryManager.isValidCategoryId(_data.categoryId), "invalid");
         
-        roles[address_] = Role.Evaluator;
-        evaluators[address_] = EvaluatorDataExtended(
+        roles[msg.sender] = Role.Evaluator;
+        evaluators[msg.sender] = RoleData.EvaluatorDataExtended(
             {
                 data : _data
             }
         );
 
         membersCount++;
-        emit MemberJoined(Role.Evaluator, _data.name, address_);
+        emit MemberJoined(Role.Evaluator, _data.name, msg.sender);
     }
 
     function getEvaluatorInfo(address _address) 
         public
         view 
-        returns(EvaluatorDataExtended memory)
+        returns(RoleData.EvaluatorDataExtended memory)
     {
         assert(getRole(_address) == Role.Evaluator);
         return evaluators[_address];

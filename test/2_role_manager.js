@@ -1,4 +1,3 @@
-const Marketplace = artifacts.require("MarketplaceApp")
 const RoleManager = artifacts.require("RoleManager")
 const CategoryManager = artifacts.require("CategoryManager");
 const truffleAssert = require('truffle-assertions');
@@ -18,18 +17,18 @@ contract("RoleManager", accounts => {
     it("should not allow a member join multiple times", async () => {
         initalMembersCount = await roleManager.getMembersCount();
 
-        tx = await roleManager.joinAsFreelancer(accounts[0], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsFreelancer({ name: "F1", categoryId: 0 }, { from: accounts[0] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[0]
         });
-        
+
         latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
 
         await truffleAssert.fails(
-            roleManager.joinAsFreelancer(accounts[0], { name: "F1", categoryId: 0 }),
+            roleManager.joinAsFreelancer({ name: "F1", categoryId: 0 }, {from:accounts[0]}),
             truffleAssert.ErrorType.REVERT
         )
 
@@ -39,18 +38,18 @@ contract("RoleManager", accounts => {
     it("should not allow a member join multiple roles", async () => {
         initalMembersCount = await roleManager.getMembersCount();
 
-        tx = await roleManager.joinAsFreelancer(accounts[1], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsFreelancer({ name: "F1", categoryId: 0 }, { from: accounts[1] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[1]
         });
-        
+
         latestMembersCount = await roleManager.getMembersCount();
         assert.equal(latestMembersCount.toNumber(), initalMembersCount.toNumber() + 1, "invalid");
 
         await truffleAssert.fails(
-            roleManager.joinAsManager(accounts[1], { name: "F1" }),
+            roleManager.joinAsManager({ name: "F1" }, { from: accounts[1] }),
             truffleAssert.ErrorType.REVERT
         )
 
@@ -61,7 +60,7 @@ contract("RoleManager", accounts => {
         initalMembersCount = await roleManager.getMembersCount();
 
         await truffleAssert.fails(
-            roleManager.joinAsFreelancer(accounts[2], { name: "F1", categoryId: 99 }),
+            roleManager.joinAsFreelancer({ name: "F1", categoryId: 99 }, { from: accounts[2] }),
             truffleAssert.ErrorType.REVERT
         );
 
@@ -71,28 +70,28 @@ contract("RoleManager", accounts => {
     it("should be able to join", async () => {
         initalMembersCount = await roleManager.getMembersCount();
 
-        tx = await roleManager.joinAsFreelancer(accounts[3], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsFreelancer({ name: "F1", categoryId: 0 }, { from: accounts[3] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 1
                 && ev.name == "F1"
                 && ev.address_ == accounts[3]
         });
 
-        tx = await roleManager.joinAsManager(accounts[4], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsManager({ name: "F1", categoryId: 0 }, { from: accounts[4] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 2
                 && ev.name == "F1"
                 && ev.address_ == accounts[4]
         });
 
-        tx = await roleManager.joinAsSponsor(accounts[5], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsSponsor({ name: "F1", categoryId: 0 }, { from: accounts[5] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 3
                 && ev.name == "F1"
                 && ev.address_ == accounts[5]
         });
 
-        tx = await roleManager.joinAsEvaluator(accounts[6], { name: "F1", categoryId: 0 });
+        tx = await roleManager.joinAsEvaluator({ name: "F1", categoryId: 0 }, { from: accounts[6] });
         truffleAssert.eventEmitted(tx, "MemberJoined", ev => {
             return ev.role == 4
                 && ev.name == "F1"
