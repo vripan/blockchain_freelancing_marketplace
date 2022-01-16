@@ -161,15 +161,48 @@ contract RoleManager
         membersCount++;
         emit MemberJoined(Role.Evaluator, _data.name, msg.sender);
     }
-
+   
+   /**
+    * @dev Get unchecked role info
+    * @param _address Role address
+    */
     function getEvaluatorInfo(address _address) 
         public
         view 
         returns(RoleData.EvaluatorDataExtended memory)
     {
-        assert(getRole(_address) == Role.Evaluator);
-        return evaluators[_address];
+        RoleData.EvaluatorDataExtended memory data = evaluators[_address];
+        assert(bytes(data.data.name).length != 0);
+        
+        return data;
     }
+
+    function getFreelancerInfo(address _address)
+        public
+        view
+        returns(RoleData.FreelancerDataExtended memory)
+    {
+        RoleData.FreelancerDataExtended memory data = freelancers[_address];
+        assert(bytes(data.data.name).length != 0);
+
+        return data;
+    }
+
+    function updateFreelancerReputation(address _address, bool increase)
+        public
+    {
+        if (increase) 
+        {
+            if(freelancers[_address].rep <= 9)
+                freelancers[_address].rep += 1;
+        } else 
+        {
+            if (freelancers[_address].rep >= 2) 
+            freelancers[_address].rep -= 1;
+        }
+    }        
+
+    
 
     function getRole(address _address) 
         public 

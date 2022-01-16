@@ -52,17 +52,6 @@ contract TaskManager
         tasksCount = 0;
         nextTaskId = 0;
     }
-
-    function refundSponsors(uint taskId)
-        internal
-    {
-        while(tasks[taskId].sponsors.length != 0)
-        {
-            uint idx = tasks[taskId].sponsors.length - 1;
-            token.transfer(tasks[taskId].sponsors[idx].sponsor, tasks[taskId].sponsors[idx].amount);
-            tasks[taskId].sponsors.pop();
-        }
-    }
     
     /**
     * @dev Add task to manager
@@ -111,11 +100,8 @@ contract TaskManager
         restrictedTo(RoleManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
-        uint amountAllowed = token.allowance(msg.sender, address(this));
-        uint senderBalance = token.balanceOf(msg.sender);
         require(amount > 0, "E05");
-        require(amountAllowed <= senderBalance, "E06");
-        require(amount <= amountAllowed, "E07");
+        requireSenderAllowance(amount);
     
         MarketplaceEntities.SponsorshipInfo memory sponsorship;
         sponsorship.sponsor = msg.sender;
@@ -193,6 +179,9 @@ contract TaskManager
         public
         taskInState(taskId, MarketplaceEntities.TaskState.Ready)
     {
+        // todo: recheck logic
+        // `applyForTask` and `hireFreelancer` should success if the timeout is over?
+
         require(tasks[taskId].readyTimestamp >= block.timestamp, "E12");
         require(tasks[taskId].freelancers.length == 0, "E13");
 
@@ -200,6 +189,120 @@ contract TaskManager
         tasks[taskId].state = MarketplaceEntities.TaskState.TimeoutOnHiring;
     
         emit MarketplaceEntities.TaskHiringTimeout(taskId);
+    }
+
+    function applyForTask(uint taskId)
+        public
+        restrictedTo(RoleManager.Role.Freelancer)
+        taskInState(taskId, MarketplaceEntities.TaskState.Ready)
+    {
+        require(roleManager.getFreelancerInfo(msg.sender).data.categoryId = tasks[taskId].data.category, "E14");
+        requireSenderAllowance(tasks[taskId].data.rewardEvaluator);
+        token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
+
+        tasks[taskId].freelancers.push(msg.sender);
+    }
+
+    function hireFreelancer(uint taskId, uint freelancerIdx)
+        public
+        restrictedToTaskManager(taskId)
+        taskInState(taskId, MarketplaceEntities.TaskState.Ready)
+    {
+        require(freelancerIdx < tasks[taskId].freelancers.length, "E15");
+
+        for (uint i=0; i<tasks[taskId].freelancers.length; i++)
+        {
+            if( i != freelancerIdx)
+            {
+                token.transfer(tasks[taskId].freelancers[i], tasks[taskId].data.rewardEvaluator);
+            }
+        }
+        
+        // swap selected freelancer with the one at index 0
+        address temp_address = tasks[taskId].freelancers[0];
+        tasks[taskId].freelancers[0] = tasks[taskId].freelancers[freelancerIdx];
+        tasks[taskId].freelancers[freelancerIdx] = temp_address;
+        
+        tasks[taskId].state = MarketplaceEntities.TaskState.WorkingOnIt;
+    }
+
+    function finishTask(uint taskId)
+        public
+        taskInState(taskId, MarketplaceEntities.TaskState.WorkingOnIt)
+    {
+        require(tasks[taskId].freelancers[0] == msg.sender, "E16");
+        tasks[taskId].state = MarketplaceEntities.TaskState.Finished;
+    }
+
+    function reviewTask(uint taskId, bool accept_results)
+        public 
+        restrictedToTaskManager(taskId)
+        taskInState(taskId, MarketplaceEntities.TaskState.Finished)
+    {
+        if (accept_results) 
+        {
+            uint reward = tasks[task].data.rewardEvaluator * 2 + tasks[task].data.rewardFreelancer;
+            address freelancer = tasks[taskId].freelancers[0];
+                        
+            roleManager.updateFreelancerReputation(freelancer, true);
+            token.transfer(freelancer, reward);
+
+            tasks[taskId].state = MarketplaceEntities.TaskState.Accepted;            
+        }
+        else 
+        {
+            tasks[taskId].state = MarketplaceEntities.TaskState.WaitingForEvaluation;
+        }
+    }
+
+    function reviewAsEvaluator(uint taskId, bool accept_result)
+        public
+        taskInState(taskId, MarketplaceEntities.TaskState.WaitingForEvaluation)
+    {
+        require(tasks[taskId].evaluator == msg.sender, "E17");
+
+        address freelancer = tasks[taskId].freelancers[0];
+        address evaluator = tasks[taskId].evaluator;
+
+        if (accept_result)
+        {
+
+            roleManager.updateFreelancerReputation(freelancer, true);
+            token.transfer(freelancer, tasks[task].data.rewardEvaluator + tasks[task].data.rewardFreelancer);
+            token.transfer(evaluator, tasks[task].data.rewardEvaluator);
+
+            tasks[taskId].state = MarketplaceEntities.TaskState.AcceptedByEvaluator;
+        } else 
+        {
+            roleManager.updateFreelancerReputation(freelancer, false);
+            refundSponsors(taskId);
+            token.transfer(evaluator, tasks[task].data.rewardEvaluator);
+            
+            tasks[taskId].state = MarketplaceEntities.TaskState.RejectedByEvaluator;
+        }
+    }
+        
+
+    function refundSponsors(uint taskId)
+        internal
+    {
+        // todo: should keep sponsors list as history?
+
+        while(tasks[taskId].sponsors.length != 0)
+        {
+            uint idx = tasks[taskId].sponsors.length - 1;
+            token.transfer(tasks[taskId].sponsors[idx].sponsor, tasks[taskId].sponsors[idx].amount);
+            tasks[taskId].sponsors.pop();
+        }
+    }
+
+    function requireSenderAllowance(uint amount)
+        internal
+    {
+        uint amountAllowed = token.allowance(msg.sender, address(this));
+        uint senderBalance = token.balanceOf(msg.sender);
+        require(amountAllowed <= senderBalance, "E06");
+        require(amount <= amountAllowed, "E07");
     }
 
     function getTasksCount() 
