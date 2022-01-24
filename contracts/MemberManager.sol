@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 import "./CategoryManager.sol";
 
-library RoleData 
+library MemberData 
 {
     struct FreelancerData
     {
@@ -50,17 +50,17 @@ library RoleData
 
 }
 
-contract RoleManager 
+contract MemberManager 
 {
     uint internal membersCount = 0;
     CategoryManager categoryManager;
 
     mapping(address => Role) internal roles;
 
-    mapping(address => RoleData.FreelancerDataExtended) internal freelancers;
-    mapping(address => RoleData.ManagerDataExtended) internal managers;
-    mapping(address => RoleData.SponsorDataExtended) internal sponsors;
-    mapping(address => RoleData.EvaluatorDataExtended) internal evaluators;
+    mapping(address => MemberData.FreelancerDataExtended) internal freelancers;
+    mapping(address => MemberData.ManagerDataExtended) internal managers;
+    mapping(address => MemberData.SponsorDataExtended) internal sponsors;
+    mapping(address => MemberData.EvaluatorDataExtended) internal evaluators;
 
     enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
     
@@ -91,7 +91,7 @@ contract RoleManager
             "Unknown";
     }
 
-    function joinAsFreelancer(RoleData.FreelancerData calldata _data) 
+    function joinAsFreelancer(MemberData.FreelancerData calldata _data) 
         external
         notJoined
     {
@@ -99,7 +99,7 @@ contract RoleManager
         require(categoryManager.isValidCategoryId(_data.categoryId), "invalid category id");
         
         roles[msg.sender] = Role.Freelancer;
-        freelancers[msg.sender] = RoleData.FreelancerDataExtended(
+        freelancers[msg.sender] = MemberData.FreelancerDataExtended(
             {
                 data : _data,
                 rep : 5
@@ -110,14 +110,14 @@ contract RoleManager
         emit MemberJoined(Role.Freelancer, _data.name, msg.sender);
     }
 
-    function joinAsManager(RoleData.ManagerData calldata _data) 
+    function joinAsManager(MemberData.ManagerData calldata _data) 
         external
         notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
         roles[msg.sender] = Role.Manager;
-        managers[msg.sender] = RoleData.ManagerDataExtended(
+        managers[msg.sender] = MemberData.ManagerDataExtended(
             {
                 data : _data
             }
@@ -127,14 +127,14 @@ contract RoleManager
         emit MemberJoined(Role.Manager, _data.name, msg.sender);
     }
      
-    function joinAsSponsor(RoleData.SponsorData calldata _data) 
+    function joinAsSponsor(MemberData.SponsorData calldata _data) 
         external
         notJoined
     {
         require(bytes(_data.name).length != 0, "Name can not be empty!");
 
         roles[msg.sender] = Role.Sponsor;
-        sponsors[msg.sender] = RoleData.SponsorDataExtended(
+        sponsors[msg.sender] = MemberData.SponsorDataExtended(
             {
                 data : _data
             }
@@ -144,7 +144,7 @@ contract RoleManager
         emit MemberJoined(Role.Sponsor, _data.name, msg.sender);
     }
 
-    function joinAsEvaluator(RoleData.EvaluatorData calldata _data) 
+    function joinAsEvaluator(MemberData.EvaluatorData calldata _data) 
         external
         notJoined
     {
@@ -152,7 +152,7 @@ contract RoleManager
         require(categoryManager.isValidCategoryId(_data.categoryId), "invalid");
         
         roles[msg.sender] = Role.Evaluator;
-        evaluators[msg.sender] = RoleData.EvaluatorDataExtended(
+        evaluators[msg.sender] = MemberData.EvaluatorDataExtended(
             {
                 data : _data
             }
@@ -169,9 +169,9 @@ contract RoleManager
     function getEvaluatorInfo(address _address) 
         public
         view 
-        returns(RoleData.EvaluatorDataExtended memory)
+        returns(MemberData.EvaluatorDataExtended memory)
     {
-        RoleData.EvaluatorDataExtended memory data = evaluators[_address];
+        MemberData.EvaluatorDataExtended memory data = evaluators[_address];
         assert(bytes(data.data.name).length != 0);
         
         return data;
@@ -180,9 +180,9 @@ contract RoleManager
     function getFreelancerInfo(address _address)
         public
         view
-        returns(RoleData.FreelancerDataExtended memory)
+        returns(MemberData.FreelancerDataExtended memory)
     {
-        RoleData.FreelancerDataExtended memory data = freelancers[_address];
+        MemberData.FreelancerDataExtended memory data = freelancers[_address];
         assert(bytes(data.data.name).length != 0);
 
         return data;

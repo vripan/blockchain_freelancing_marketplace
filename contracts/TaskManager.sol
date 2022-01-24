@@ -4,14 +4,14 @@ pragma solidity ^0.8.0;
 
 import "./MarketplaceEntities.sol";
 import "./CategoryManager.sol";
-import "./RoleManager.sol";
+import "./MemberManager.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TaskManager
 {
     CategoryManager categoryManager;
-    RoleManager roleManager;
+    MemberManager memberManager;
     ERC20 internal token;
 
     uint internal tasksCount;
@@ -22,9 +22,9 @@ contract TaskManager
     uint constant TASK_NO_FREELANCERS_TIMEOUT_SECONDS = 10;
     uint constant TASK_NO_EVALUATOR_TIMEOUT_SECONDS = 10;
 
-    modifier restrictedTo(RoleManager.Role role)
+    modifier restrictedTo(MemberManager.Role role)
     {
-        require(roleManager.getRole(msg.sender) == role, "operation restricted for that role");
+        require(memberManager.getRole(msg.sender) == role, "Operation restricted for that role");
         _;
     }
 
@@ -43,10 +43,10 @@ contract TaskManager
         _;
     }
 
-    constructor(address categoryManager_, address roleManager_, address token_)
+    constructor(address categoryManager_, address memberManager_, address token_)
     {
         categoryManager = CategoryManager(categoryManager_);
-        roleManager = RoleManager(roleManager_);
+        memberManager = MemberManager(memberManager_);
         token = ERC20(token_);
 
         tasksCount = 0;
@@ -59,7 +59,7 @@ contract TaskManager
     */
     function addTask(MarketplaceEntities.TaskData calldata _task)
         public
-        restrictedTo(RoleManager.Role.Manager)
+        restrictedTo(MemberManager.Role.Manager)
         returns (uint)
     {
         require(bytes(_task.description).length > 0, "E01");
@@ -69,7 +69,7 @@ contract TaskManager
         
         uint taskId = nextTaskId;
         MarketplaceEntities.TaskDataExtended storage taskEx = tasks[taskId];
-        
+
         taskEx.data = _task;
         taskEx.manager = msg.sender;
         taskEx.state = MarketplaceEntities.TaskState.NotFounded;
@@ -97,7 +97,7 @@ contract TaskManager
 
     function sponsorTask(uint taskId, uint amount)
         public
-        restrictedTo(RoleManager.Role.Sponsor)
+        restrictedTo(MemberManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
         require(amount > 0, "E05");
@@ -138,7 +138,7 @@ contract TaskManager
 
     function withdrawSponsorship(uint taskId)
         public
-        restrictedTo(RoleManager.Role.Sponsor)
+        restrictedTo(MemberManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
          MarketplaceEntities.TaskDataExtended memory task = tasks[taskId];
@@ -165,8 +165,8 @@ contract TaskManager
     {
         assert(tasks[taskId].evaluator == address(0));
         
-        require(roleManager.getRole(evaluator) == RoleManager.Role.Evaluator, "E10");
-        require(roleManager.getEvaluatorInfo(evaluator).data.categoryId ==  tasks[taskId].data.category, "E11");
+        require(memberManager.getRole(evaluator) == MemberManager.Role.Evaluator, "E10");
+        require(memberManager.getEvaluatorInfo(evaluator).data.categoryId ==  tasks[taskId].data.category, "E11");
 
         tasks[taskId].evaluator = evaluator;
         tasks[taskId].state = MarketplaceEntities.TaskState.Ready;
@@ -193,10 +193,10 @@ contract TaskManager
 
     function applyForTask(uint taskId)
         public
-        restrictedTo(RoleManager.Role.Freelancer)
+        restrictedTo(MemberManager.Role.Freelancer)
         taskInState(taskId, MarketplaceEntities.TaskState.Ready)
     {
-        require(roleManager.getFreelancerInfo(msg.sender).data.categoryId == tasks[taskId].data.category, "E14");
+        require(memberManager.getFreelancerInfo(msg.sender).data.categoryId == tasks[taskId].data.category, "E14");
         requireSenderAllowance(tasks[taskId].data.rewardEvaluator);
         token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
 
@@ -244,7 +244,7 @@ contract TaskManager
             uint reward = tasks[taskId].data.rewardEvaluator * 2 + tasks[taskId].data.rewardFreelancer;
             address freelancer = tasks[taskId].freelancers[0];
                         
-            roleManager.updateFreelancerReputation(freelancer, true);
+            memberManager.updateFreelancerReputation(freelancer, true);
             token.transfer(freelancer, reward);
 
             tasks[taskId].state = MarketplaceEntities.TaskState.Accepted;            
@@ -267,14 +267,14 @@ contract TaskManager
         if (accept_result)
         {
 
-            roleManager.updateFreelancerReputation(freelancer, true);
+            memberManager.updateFreelancerReputation(freelancer, true);
             token.transfer(freelancer, tasks[taskId].data.rewardEvaluator + tasks[taskId].data.rewardFreelancer);
             token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
 
             tasks[taskId].state = MarketplaceEntities.TaskState.AcceptedByEvaluator;
         } else 
         {
-            roleManager.updateFreelancerReputation(freelancer, false);
+            memberManager.updateFreelancerReputation(freelancer, false);
             refundSponsors(taskId);
             token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
             
@@ -303,6 +303,15 @@ contract TaskManager
         uint senderBalance = token.balanceOf(msg.sender);
         require(amountAllowed <= senderBalance, "E06");
         require(amount <= amountAllowed, "E07");
+    }
+
+    function getTaskData(uint taskId)
+        external
+        view
+        returns (MarketplaceEntities.TaskDataExtended memory)
+    {
+            require(taskId < nextTaskId, "Invalid Id!");
+            return tasks[taskId];
     }
 
     function getTasksCount() 

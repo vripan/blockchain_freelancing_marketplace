@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "./Ownable.sol";
 import "./MarketplaceEntities.sol";
 import "./CategoryManager.sol";
-import "./RoleManager.sol";
+import "./MemberManager.sol";
 import "./TaskManager.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";

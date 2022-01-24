@@ -14,10 +14,10 @@ library MarketplaceEntities
 
     struct TaskData
     {
-        string description;
-        uint rewardFreelancer;
-        uint rewardEvaluator;
-        uint category;
+        string  description;
+        uint    rewardFreelancer;
+        uint    rewardEvaluator;
+        uint    category;
     }
 
     struct TaskDataExtended
