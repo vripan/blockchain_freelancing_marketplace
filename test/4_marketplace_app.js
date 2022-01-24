@@ -1,6 +1,6 @@
 const TaskManager = artifacts.require("TaskManager");
 const CategoryManager = artifacts.require("CategoryManager");
-const RoleManager = artifacts.require("RoleManager");
+const MemberManager = artifacts.require("MemberManager");
 const Token = artifacts.require("Token");
 
 const { time } = require("@openzeppelin/test-helpers");
@@ -27,7 +27,7 @@ contract("TaskManager", accounts => {
     });
     it("init market with members", async () => {
         taskManager = await TaskManager.deployed();
-        roleManager = await RoleManager.deployed();
+        memberManager = await MemberManager.deployed();
         token = await Token.deployed();
 
         entity_name = "entity"
@@ -39,26 +39,26 @@ contract("TaskManager", accounts => {
             if(i >= 0 && i < chunk_size )
             {
                 freelancers.push(accounts[i]);
-                await roleManager.joinAsFreelancer({name:entity_name, categoryId:0}, {from:accounts[i]})
+                await memberManager.joinAsFreelancer({name:entity_name, categoryId:0}, {from:accounts[i]})
             }
             else if(i >= chunk_size && i < chunk_size * 2)
             {
                 sponsors.push(accounts[i]);
-                await roleManager.joinAsSponsor({name:entity_name}, {from:accounts[i]})
+                await memberManager.joinAsSponsor({name:entity_name}, {from:accounts[i]})
             }
             else if(i >= chunk_size * 2 && i < chunk_size * 3)
             {
                 managers.push(accounts[i]);
-                await roleManager.joinAsManager({name:entity_name}, {from:accounts[i]})
+                await memberManager.joinAsManager({name:entity_name}, {from:accounts[i]})
             }
             else if(i >= chunk_size * 3&& i < chunk_size * 4)
             {
                 evaluators.push(accounts[i]);
-                await roleManager.joinAsEvaluator({name:entity_name, categoryId:0}, {from:accounts[i]})
+                await memberManager.joinAsEvaluator({name:entity_name, categoryId:0}, {from:accounts[i]})
             }
         }
 
-        membersCount = await roleManager.getMembersCount();
+        membersCount = await memberManager.getMembersCount();
         assert.equal(membersCount.toNumber(), accounts.length, "invalid");
     });
     it("create task", async () => {
