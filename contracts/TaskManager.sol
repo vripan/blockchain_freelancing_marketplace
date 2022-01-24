@@ -131,7 +131,7 @@ contract TaskManager
 
         if(existingAmount == targetAmount)
         {
-            tasks[taskId].state = MarketplaceEntities.TaskState.Funded;
+            updateTaskState(taskId, MarketplaceEntities.TaskState.Funded);
             emit MarketplaceEntities.TaskFunded(taskId);
         }
     }
@@ -169,8 +169,8 @@ contract TaskManager
         require(memberManager.getEvaluatorInfo(evaluator).data.categoryId ==  tasks[taskId].data.category, "E11");
 
         tasks[taskId].evaluator = evaluator;
-        tasks[taskId].state = MarketplaceEntities.TaskState.Ready;
         tasks[taskId].readyTimestamp = block.timestamp + TASK_NO_FREELANCERS_TIMEOUT_SECONDS;
+        updateTaskState(taskId, MarketplaceEntities.TaskState.Ready);
 
         emit MarketplaceEntities.TaskReady(taskId, evaluator);
     }
@@ -186,8 +186,8 @@ contract TaskManager
         require(tasks[taskId].freelancers.length == 0, "E13");
 
         refundSponsors(taskId);
-        tasks[taskId].state = MarketplaceEntities.TaskState.TimeoutOnHiring;
-    
+        updateTaskState(taskId, MarketplaceEntities.TaskState.TimeoutOnHiring);
+
         emit MarketplaceEntities.TaskHiringTimeout(taskId);
     }
 
@@ -225,7 +225,7 @@ contract TaskManager
         tasks[taskId].freelancers[0] = tasks[taskId].freelancers[freelancerIdx];
         tasks[taskId].freelancers[freelancerIdx] = temp_address;
         
-        tasks[taskId].state = MarketplaceEntities.TaskState.WorkingOnIt;
+        updateTaskState(taskId, MarketplaceEntities.TaskState.WorkingOnIt);
 
         emit MarketplaceEntities.TaskFreelancerHired(taskId, tasks[taskId].freelancers[0]);
     }
@@ -235,7 +235,7 @@ contract TaskManager
         taskInState(taskId, MarketplaceEntities.TaskState.WorkingOnIt)
     {
         require(tasks[taskId].freelancers[0] == msg.sender, "E16");
-        tasks[taskId].state = MarketplaceEntities.TaskState.Finished;
+        updateTaskState(taskId, MarketplaceEntities.TaskState.Finished);
 
         emit MarketplaceEntities.TaskFinished(taskId);
     }
@@ -253,11 +253,11 @@ contract TaskManager
             memberManager.updateFreelancerReputation(freelancer, true);
             token.transfer(freelancer, reward);
 
-            tasks[taskId].state = MarketplaceEntities.TaskState.Accepted;            
+            updateTaskState(taskId, MarketplaceEntities.TaskState.Accepted);
         }
         else 
         {
-            tasks[taskId].state = MarketplaceEntities.TaskState.WaitingForEvaluation;
+            updateTaskState(taskId, MarketplaceEntities.TaskState.WaitingForEvaluation);
         }
 
         emit MarketplaceEntities.TaskReviewed(taskId, accept_results);
@@ -279,17 +279,25 @@ contract TaskManager
             token.transfer(freelancer, tasks[taskId].data.rewardEvaluator + tasks[taskId].data.rewardFreelancer);
             token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
 
-            tasks[taskId].state = MarketplaceEntities.TaskState.AcceptedByEvaluator;
+            updateTaskState(taskId, MarketplaceEntities.TaskState.AcceptedByEvaluator);
         } else 
         {
             memberManager.updateFreelancerReputation(freelancer, false);
             refundSponsors(taskId);
             token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
             
-            tasks[taskId].state = MarketplaceEntities.TaskState.RejectedByEvaluator;
+            updateTaskState(taskId, MarketplaceEntities.TaskState.RejectedByEvaluator);
         }
+
+        emit MarketplaceEntities.TaskReviewedByEvaluator(taskId, accept_result);
     }
-        
+    
+    function updateTaskState(uint _taskId, MarketplaceEntities.TaskState _state)
+    internal
+    {
+        tasks[_taskId].state = _state;
+        emit MarketplaceEntities.TaskStateChanged(_taskId, _state);
+    }
 
     function refundSponsors(uint taskId)
         internal
