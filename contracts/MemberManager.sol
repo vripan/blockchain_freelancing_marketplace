@@ -50,7 +50,7 @@ library MemberData
 
 }
 
-contract MemberManager 
+contract MemberManager is Ownable
 {
     uint internal membersCount = 0;
     CategoryManager categoryManager;
@@ -190,6 +190,7 @@ contract MemberManager
 
     function updateFreelancerReputation(address _address, bool increase)
         public
+        restricted
     {
         if (increase) 
         {
