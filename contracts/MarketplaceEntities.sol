@@ -37,6 +37,10 @@ library MarketplaceEntities
     event TaskSponsored(uint taskId, address sponsor, uint amount);
     event TaskFunded(uint taskId);
     event TaskReady(uint taskId, address evaluator);
+    event TaskFreelancerApplied(uint taskId, address freelancer);
+    event TaskFreelancerHired(uint taskId, address freelancer);
+    event TaskFinished(uint taskId);
+    event TaskReviewed(uint taskId, bool accepted);
     event TaskHiringTimeout(uint taskId);
     function deleteFromArray(SponsorshipInfo[] storage array, uint index)
         public

@@ -65,6 +65,7 @@ contract MemberManager is Ownable
     enum Role { Unknown, Freelancer, Manager, Sponsor, Evaluator }
     
     event MemberJoined(Role role, string name, address address_);
+    event FreelancerReputationChanged(address freelancer, bool increase);
 
     modifier notJoined()
     {
@@ -201,6 +202,8 @@ contract MemberManager is Ownable
             if (freelancers[_address].rep >= 2) 
             freelancers[_address].rep -= 1;
         }
+
+        emit FreelancerReputationChanged(_address, increase);
     }        
 
     

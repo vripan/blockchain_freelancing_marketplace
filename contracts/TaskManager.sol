@@ -201,6 +201,8 @@ contract TaskManager
         token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
 
         tasks[taskId].freelancers.push(msg.sender);
+
+        emit MarketplaceEntities.TaskFreelancerApplied(taskId, msg.sender);
     }
 
     function hireFreelancer(uint taskId, uint freelancerIdx)
@@ -224,6 +226,8 @@ contract TaskManager
         tasks[taskId].freelancers[freelancerIdx] = temp_address;
         
         tasks[taskId].state = MarketplaceEntities.TaskState.WorkingOnIt;
+
+        emit MarketplaceEntities.TaskFreelancerHired(taskId, tasks[taskId].freelancers[0]);
     }
 
     function finishTask(uint taskId)
@@ -232,6 +236,8 @@ contract TaskManager
     {
         require(tasks[taskId].freelancers[0] == msg.sender, "E16");
         tasks[taskId].state = MarketplaceEntities.TaskState.Finished;
+
+        emit MarketplaceEntities.TaskFinished(taskId);
     }
 
     function reviewTask(uint taskId, bool accept_results)
@@ -253,6 +259,8 @@ contract TaskManager
         {
             tasks[taskId].state = MarketplaceEntities.TaskState.WaitingForEvaluation;
         }
+
+        emit MarketplaceEntities.TaskReviewed(taskId, accept_results);
     }
 
     function reviewAsEvaluator(uint taskId, bool accept_result)
@@ -298,6 +306,7 @@ contract TaskManager
 
     function requireSenderAllowance(uint amount)
         internal
+        view
     {
         uint amountAllowed = token.allowance(msg.sender, address(this));
         uint senderBalance = token.balanceOf(msg.sender);

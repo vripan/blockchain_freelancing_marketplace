@@ -16,6 +16,8 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.link(MarketplaceUtils, TaskManager);
 
   tm_instance = await deployer.deploy(TaskManager, cm_instance.address, mm_instance.address, token_instance.address);
+
+  await mm_instance.changeOwner(tm_instance.address);
   
   // await deployer.deploy(Marketplace, cm_instance.address, rm_instance.address, tm_instance.address);
 };
