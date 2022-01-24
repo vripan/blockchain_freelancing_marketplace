@@ -196,7 +196,7 @@ contract TaskManager
         restrictedTo(RoleManager.Role.Freelancer)
         taskInState(taskId, MarketplaceEntities.TaskState.Ready)
     {
-        require(roleManager.getFreelancerInfo(msg.sender).data.categoryId = tasks[taskId].data.category, "E14");
+        require(roleManager.getFreelancerInfo(msg.sender).data.categoryId == tasks[taskId].data.category, "E14");
         requireSenderAllowance(tasks[taskId].data.rewardEvaluator);
         token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
 
@@ -241,7 +241,7 @@ contract TaskManager
     {
         if (accept_results) 
         {
-            uint reward = tasks[task].data.rewardEvaluator * 2 + tasks[task].data.rewardFreelancer;
+            uint reward = tasks[taskId].data.rewardEvaluator * 2 + tasks[taskId].data.rewardFreelancer;
             address freelancer = tasks[taskId].freelancers[0];
                         
             roleManager.updateFreelancerReputation(freelancer, true);
@@ -268,15 +268,15 @@ contract TaskManager
         {
 
             roleManager.updateFreelancerReputation(freelancer, true);
-            token.transfer(freelancer, tasks[task].data.rewardEvaluator + tasks[task].data.rewardFreelancer);
-            token.transfer(evaluator, tasks[task].data.rewardEvaluator);
+            token.transfer(freelancer, tasks[taskId].data.rewardEvaluator + tasks[taskId].data.rewardFreelancer);
+            token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
 
             tasks[taskId].state = MarketplaceEntities.TaskState.AcceptedByEvaluator;
         } else 
         {
             roleManager.updateFreelancerReputation(freelancer, false);
             refundSponsors(taskId);
-            token.transfer(evaluator, tasks[task].data.rewardEvaluator);
+            token.transfer(evaluator, tasks[taskId].data.rewardEvaluator);
             
             tasks[taskId].state = MarketplaceEntities.TaskState.RejectedByEvaluator;
         }
