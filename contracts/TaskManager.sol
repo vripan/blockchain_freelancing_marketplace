@@ -341,17 +341,41 @@ contract TaskManager
         require(amount <= amountAllowed, "E07");
     }
 
-    // function getTaskData(uint taskId)
-    //     external
-    //     view
-    //     returns (MarketplaceEntities.TaskDataExtended memory)
-    // {
-    //         require(taskId < nextTaskId, "Invalid Id!");
-    //         return tasks[taskId];
-    // }
+    function getTaskData(uint taskId)
+        external
+        view
+        returns (MarketplaceEntities.TaskDataExternal memory)
+    {
+            require(taskId < nextTaskId, "Invalid Id!");
+            
+            MarketplaceEntities.TaskDataExtended storage task = tasks[taskId];
+            MarketplaceEntities.SponsorshipDataExternal memory spData;
+            
+            spData.sponsors = new MarketplaceEntities.SponsorshipInfo[](task.sponsorshipData.sponsors.length);
+            spData.totalAmount = task.sponsorshipData.totalAmount;
+
+            for(uint i = 0; i < task.sponsorshipData.sponsors.length; i++){
+                spData.sponsors[i] = 
+                    MarketplaceEntities.SponsorshipInfo(
+                        task.sponsorshipData.sponsors[i],
+                        task.sponsorshipData.sponsorship[task.sponsorshipData.sponsors[i]]
+                        );
+            }
+            return MarketplaceEntities.TaskDataExternal(
+                {
+                    data: task.data,
+                    manager: task.manager,
+                    sponsorshipData: spData,
+                    freelancersData: task.freelancersData,
+                    evaluator: task.evaluator,
+                    state: task.state,
+                    readyTimestamp: task.readyTimestamp
+                }
+            );
+    }
 
     function getTasksCount() 
-        public 
+        public
         view
         returns(uint)
     {

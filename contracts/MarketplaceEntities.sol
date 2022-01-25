@@ -4,10 +4,22 @@ pragma solidity ^0.8.0;
 
 library MarketplaceEntities
 {
+    //external usage
+    struct SponsorshipInfo
+    {
+        address sponsorAddr;
+        uint sponsorshipAmount;
+    }
+
     struct SponsorshipData
     {
         address[] sponsors;
         mapping(address => uint) sponsorship;
+        uint totalAmount;
+    }
+
+    struct SponsorshipDataExternal{
+        SponsorshipInfo[] sponsors;
         uint totalAmount;
     }
 
@@ -25,6 +37,17 @@ library MarketplaceEntities
         uint    rewardFreelancer;
         uint    rewardEvaluator;
         uint    category;
+    }
+
+    struct TaskDataExternal
+    {
+        TaskData data;
+        address manager;
+        SponsorshipDataExternal sponsorshipData;
+        FreelancersData freelancersData;
+        address evaluator;
+        TaskState state;
+        uint256 readyTimestamp;
     }
 
     struct TaskDataExtended
