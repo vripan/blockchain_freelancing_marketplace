@@ -103,33 +103,25 @@ contract TaskManager
         require(amount > 0, "E05");
         requireSenderAllowance(amount);
     
-        MarketplaceEntities.SponsorshipInfo memory sponsorship;
-        sponsorship.sponsor = msg.sender;
-        sponsorship.amount = amount;
-        
-        MarketplaceEntities.TaskDataExtended memory task = tasks[taskId];
+        MarketplaceEntities.TaskDataExtended storage task = tasks[taskId];
 
-        uint existingAmount = 0; 
         uint targetAmount = task.data.rewardFreelancer + task.data.rewardEvaluator;
-        
-        // check for multiple sponsorhips from the same sponsor
-        for (uint i=0; i<task.sponsors.length; i++)
-        {
-            require(task.sponsors[i].sponsor != sponsorship.sponsor, "E08");
-            existingAmount += task.sponsors[i].amount;
-        }
     
         // do not receive more than target amount
-        require(sponsorship.amount <= targetAmount - existingAmount, "E09");
+        require(amount <= targetAmount - task.sponsorshipData.totalAmount, "E09");
         
-        token.transferFrom(sponsorship.sponsor, address(this), sponsorship.amount);
-        tasks[taskId].sponsors.push(sponsorship);
-
-        existingAmount += sponsorship.amount;
+        token.transferFrom(msg.sender, address(this), amount);
+        
+        //update sponsorship data in task
+        task.sponsorshipData.totalAmount += amount;
+        if(task.sponsorshipData.sponsorship[msg.sender] == 0){
+            task.sponsorshipData.sponsors.push(msg.sender);
+        }
+        task.sponsorshipData.sponsorship[msg.sender] += amount;
 
         emit MarketplaceEntities.TaskSponsored(taskId, msg.sender, amount);
 
-        if(existingAmount == targetAmount)
+        if(task.sponsorshipData.totalAmount == targetAmount)
         {
             updateTaskState(taskId, MarketplaceEntities.TaskState.Funded);
             emit MarketplaceEntities.TaskFunded(taskId);
@@ -141,21 +133,39 @@ contract TaskManager
         restrictedTo(MemberManager.Role.Sponsor)
         taskInState(taskId, MarketplaceEntities.TaskState.NotFounded)
     {
-         MarketplaceEntities.TaskDataExtended memory task = tasks[taskId];
+        MarketplaceEntities.TaskDataExtended storage task = tasks[taskId];
+        uint amount = task.sponsorshipData.sponsorship[msg.sender];
+        require(amount > 0, "E6");
 
-         for(uint i=0; i<task.sponsors.length; i++)
-         {
-            if(task.sponsors[i].sponsor == msg.sender)
-            {
-                token.transfer(task.sponsors[i].sponsor, task.sponsors[i].amount);
-                
-                MarketplaceEntities.deleteFromArray(tasks[taskId].sponsors, i);
+        token.transfer(msg.sender, amount);
+        delete task.sponsorshipData.sponsorship[msg.sender];
+        task.sponsorshipData.totalAmount -= amount;
 
-                emit MarketplaceEntities.SponsorshipWidrawed(taskId, task.sponsors[i].sponsor, task.sponsors[i].amount);
-                return;
+        // also remove from list of sponsors;
+        for(uint i = 0; i < task.sponsorshipData.sponsors.length; i++){
+            if(task.sponsorshipData.sponsors[i] == msg.sender){
+                // put last element on index i and delete last element
+                task.sponsorshipData.sponsors[i] = task.sponsorshipData.sponsors[task.sponsorshipData.sponsors.length - 1];
+                task.sponsorshipData.sponsors.pop();
+                break;
             }
-         }
-         revert();
+        }
+
+        emit MarketplaceEntities.SponsorshipWidrawed(taskId, msg.sender, amount);
+
+        //  for(uint i=0; i<task.sponsors.length; i++)
+        //  {
+        //     if(task.sponsors[i].sponsor == msg.sender)
+        //     {
+        //         token.transfer(task.sponsors[i].sponsor, task.sponsors[i].amount);
+                
+        //         MarketplaceEntities.deleteFromArray(tasks[taskId].sponsors, i);
+
+        //         emit MarketplaceEntities.SponsorshipWidrawed(taskId, task.sponsors[i].sponsor, task.sponsors[i].amount);
+        //         return;
+        //     }
+        //  }
+        //  revert();
     }
 
     function linkEvaluatorToTask(uint taskId, address evaluator)
@@ -183,7 +193,7 @@ contract TaskManager
         // `applyForTask` and `hireFreelancer` should success if the timeout is over?
 
         require(tasks[taskId].readyTimestamp >= block.timestamp, "E12");
-        require(tasks[taskId].freelancers.length == 0, "E13");
+        require(tasks[taskId].freelancersData.freelancers.length == 0, "E13");
 
         refundSponsors(taskId);
         updateTaskState(taskId, MarketplaceEntities.TaskState.TimeoutOnHiring);
@@ -200,7 +210,7 @@ contract TaskManager
         requireSenderAllowance(tasks[taskId].data.rewardEvaluator);
         token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
 
-        tasks[taskId].freelancers.push(msg.sender);
+        tasks[taskId].freelancersData.freelancers.push(msg.sender);
 
         emit MarketplaceEntities.TaskFreelancerApplied(taskId, msg.sender);
     }
@@ -210,31 +220,33 @@ contract TaskManager
         restrictedToTaskManager(taskId)
         taskInState(taskId, MarketplaceEntities.TaskState.Ready)
     {
-        require(freelancerIdx < tasks[taskId].freelancers.length, "E15");
+        require(freelancerIdx < tasks[taskId].freelancersData.freelancers.length, "E15");
 
-        for (uint i=0; i<tasks[taskId].freelancers.length; i++)
+        for (uint i=0; i<tasks[taskId].freelancersData.freelancers.length; i++)
         {
             if( i != freelancerIdx)
             {
-                token.transfer(tasks[taskId].freelancers[i], tasks[taskId].data.rewardEvaluator);
+                token.transfer(tasks[taskId].freelancersData.freelancers[i], tasks[taskId].data.rewardEvaluator);
             }
         }
+
+        tasks[taskId].freelancersData.chosen = tasks[taskId].freelancersData.freelancers[freelancerIdx];
         
         // swap selected freelancer with the one at index 0
-        address temp_address = tasks[taskId].freelancers[0];
-        tasks[taskId].freelancers[0] = tasks[taskId].freelancers[freelancerIdx];
-        tasks[taskId].freelancers[freelancerIdx] = temp_address;
+        // address temp_address = tasks[taskId].freelancers[0];
+        // tasks[taskId].freelancers[0] = tasks[taskId].freelancers[freelancerIdx];
+        // tasks[taskId].freelancers[freelancerIdx] = temp_address;
         
         updateTaskState(taskId, MarketplaceEntities.TaskState.WorkingOnIt);
 
-        emit MarketplaceEntities.TaskFreelancerHired(taskId, tasks[taskId].freelancers[0]);
+        emit MarketplaceEntities.TaskFreelancerHired(taskId, tasks[taskId].freelancersData.chosen);
     }
 
     function finishTask(uint taskId)
         public
         taskInState(taskId, MarketplaceEntities.TaskState.WorkingOnIt)
     {
-        require(tasks[taskId].freelancers[0] == msg.sender, "E16");
+        require(tasks[taskId].freelancersData.chosen == msg.sender, "E16");
         updateTaskState(taskId, MarketplaceEntities.TaskState.Finished);
 
         emit MarketplaceEntities.TaskFinished(taskId);
@@ -248,7 +260,7 @@ contract TaskManager
         if (accept_results) 
         {
             uint reward = tasks[taskId].data.rewardEvaluator * 2 + tasks[taskId].data.rewardFreelancer;
-            address freelancer = tasks[taskId].freelancers[0];
+            address freelancer = tasks[taskId].freelancersData.chosen;
                         
             memberManager.updateFreelancerReputation(freelancer, true);
             token.transfer(freelancer, reward);
@@ -269,7 +281,7 @@ contract TaskManager
     {
         require(tasks[taskId].evaluator == msg.sender, "E17");
 
-        address freelancer = tasks[taskId].freelancers[0];
+        address freelancer = tasks[taskId].freelancersData.chosen;
         address evaluator = tasks[taskId].evaluator;
 
         if (accept_result)
@@ -302,14 +314,21 @@ contract TaskManager
     function refundSponsors(uint taskId)
         internal
     {
+        MarketplaceEntities.TaskDataExtended storage task = tasks[taskId];
+
+        for(uint i = 0;i < task.sponsorshipData.sponsors.length; i++){
+            address sponsorAddr = task.sponsorshipData.sponsors[i];
+            token.transfer(sponsorAddr, task.sponsorshipData.sponsorship[sponsorAddr]);
+        }
+
         // todo: should keep sponsors list as history?
 
-        while(tasks[taskId].sponsors.length != 0)
-        {
-            uint idx = tasks[taskId].sponsors.length - 1;
-            token.transfer(tasks[taskId].sponsors[idx].sponsor, tasks[taskId].sponsors[idx].amount);
-            tasks[taskId].sponsors.pop();
-        }
+        // while(tasks[taskId].sponsors.length != 0)
+        // {
+        //     uint idx = tasks[taskId].sponsors.length - 1;
+        //     token.transfer(tasks[taskId].sponsors[idx].sponsor, tasks[taskId].sponsors[idx].amount);
+        //     tasks[taskId].sponsors.pop();
+        // }
     }
 
     function requireSenderAllowance(uint amount)
@@ -322,14 +341,14 @@ contract TaskManager
         require(amount <= amountAllowed, "E07");
     }
 
-    function getTaskData(uint taskId)
-        external
-        view
-        returns (MarketplaceEntities.TaskDataExtended memory)
-    {
-            require(taskId < nextTaskId, "Invalid Id!");
-            return tasks[taskId];
-    }
+    // function getTaskData(uint taskId)
+    //     external
+    //     view
+    //     returns (MarketplaceEntities.TaskDataExtended memory)
+    // {
+    //         require(taskId < nextTaskId, "Invalid Id!");
+    //         return tasks[taskId];
+    // }
 
     function getTasksCount() 
         public 
