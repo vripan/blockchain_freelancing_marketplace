@@ -1,2 +1,3 @@
 truffle migrate --reset
-npm run dev
+truffle exec setup.js 
+npm start

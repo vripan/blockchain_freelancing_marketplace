@@ -1,0 +1,2 @@
+
+            export default {"TaskManager":"0x6A2c83b25ce564F0ab0A5C7AC0BAb457DCE7a62E","CategoryManager":"0xf2CBd453df27EEcB66f0789e9D0B5c93Ce83c288","MemberManager":"0x1Cac5c99FC242aD18e9b9f226aB992Aa29dABaDD","Token":"0x18137c3a74eC722074a971A44b5c83c9CeA0468E"};
