@@ -17,7 +17,10 @@ module.exports = async function (callback) {
         token = await Token.deployed();
 
         let all_addresses = {
-            TaskManager: taskManager.address
+            TaskManager: taskManager.address,
+            CategoryManager: categoryManager.address,
+            MemberManager: memberManager.address,
+            Token: token.address
         };
         let file = `
             export default ${JSON.stringify(all_addresses)};`;
@@ -26,18 +29,18 @@ module.exports = async function (callback) {
             if (err) throw err;
         });
 
-        await Promise.all([
-            categoryManager.addCategory("c1"),
-            categoryManager.addCategory("c2"),
-            categoryManager.addCategory("c3"),
-        ]);
+        // await Promise.all([
+        //     categoryManager.addCategory("c1"),
+        //     categoryManager.addCategory("c2"),
+        //     categoryManager.addCategory("c3"),
+        // ]);
 
-        await memberManager.joinAsManager({
-            name: 'eu'
-        });
+        // await memberManager.joinAsManager({
+        //     name: 'eu'
+        // });
 
         tx = await taskManager.addTask({
-            description: "This is a description of the task",
+            description: "This is a description of the task2",
             rewardFreelancer: 10,
             rewardEvaluator: 10,
             category: 0

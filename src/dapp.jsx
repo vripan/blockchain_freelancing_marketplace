@@ -1,85 +1,39 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import ReactDOM from "react-dom";
 import * as ethers from "ethers";
 import { getChainByChainId } from "evm-chains";
 import microtip from "microtip/microtip.css";
-import { GlobalStyles, VStack, HStack, Wrapper, Divider, UnstyledButton, OutlinedButton, Card, Dot, Overlay } from "./styles";
 import { X, ChevronRight, Upload, Eye, Edit2, Play } from "react-feather";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, Link } from "react-router-dom";
 
-import TaskManager from './contracts/TaskManager.json';
-import ContractAdresses from './addresses';
+import { GlobalStyles, VStack, HStack, Wrapper, Divider, UnstyledButton, OutlinedButton, Card, Dot, Overlay } from './styles';
 
-/*W
-App = {
-  web3Provider: null,
-  contracts: {},
+import Tasks from './components/tasks';
+import Register from './register';
+import Contracts from './contracts';
 
-  init: async function () {
-    return await App.initWeb3();
-  },
-
-  initWeb3: async function () {
-    if (typeof web3 !== 'undefined') {
-      App.web3Provider = web3.currentProvider;
-      web3 = new Web3(web3.currentProvider);
-      console.log("Web3 provided by metamask");
-    } else {
-      App.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
-      web3 = new Web3(App.web3Provider);
-      console.log("Web3 provided by localhost");
-    }
-    return App.initContract();
-  },
-
-  initContract: async function () {
-    var loader = $("#loader");
-    var content = $("#content");
-
-    loader.show();
-    content.hide();
-
-    await $.getJSON("TaskManager.json", function (marketplace) {
-      App.contracts.TaskManager = TruffleContract(marketplace);
-      App.contracts.TaskManager.setProvider(App.web3Provider);
-    });
-
-    await $.getJSON("Token.json", function (token) {
-      App.contracts.Token = TruffleContract(token);
-      App.contracts.Token.setProvider(App.web3Provider);
-    });
-
-    if (web3.currentProvider.enable) {
-      web3.currentProvider.enable().then(function (acc) {
-        App.account = acc[0];
-        balance = 0;
-
-        App.contracts.Token.deployed().then(function (tkn) {
-          tkn.balanceOf(App.account).then(function (balance) {
-            $("#accountAddress").html("Your Account: " + App.account + "<br> Balance: " + balance + " TKN");
-          })
-        })
-      });
-    } else {
-      $("#accountAddress").html("Provider not enabled");
-    }
-
-    loader.hide();
-    content.show();
-  },
-};
-
-$(function () {
-  $(window).load(function () {
-    App.init();
-  });
-});
-*/
+const MARKETPLACE_CHAIN_ID = 1337;
 
 async function connect() {
     window.ethereum.request({ method: "eth_requestAccounts" });
 }
 
-// Copies text to clipboard with a fake input
+function useWalletAddress() {
+    const { ethereum } = window;
+    let value = ethereum && ethereum.selectedAddress;
+    const [address, setAddress] = useState(value);
+
+    useEffect(() => {
+        const onAddressChanged = (addresses) => setAddress(addresses[0]);
+        ethereum && ethereum.on("accountsChanged", onAddressChanged);
+        return () => {
+            ethereum && ethereum.removeListener("accountsChanged", onAddressChanged);
+        };
+    });
+
+    return address || value;
+}
+
+// Copies text to clipboard
 function copy(text) {
     var inp = document.createElement("input");
     inp.style.position = "absolute";
@@ -180,6 +134,21 @@ const HelpIndicator = ({ text, pos, filled }) => {
     );
 };
 
+function useChainId() {
+    const { ethereum } = window;
+    const [chainId, setChainId] = useState(ethereum && ethereum.chainId);
+
+    useEffect(() => {
+        ethereum && ethereum.on("chainChanged", setChainId);
+        return () => {
+            ethereum && ethereum.removeListener("chainChanged", setChainId);
+        };
+    });
+
+    let id = chainId || (ethereum && ethereum.chainId) || "1";
+    return parseInt(id);
+}
+
 function chainById(id) {
     try {
         return getChainByChainId(id);
@@ -221,51 +190,30 @@ function ChainInfo({ chainId }) {
     );
 }
 
-function TaskCard({ data }) {
-    return (
-        <VStack
-            style={{
-                backgroundColor: "var(--bg-default)",
-                border: "1px solid var(--outline-dimmest)",
-                borderRadius: "var(--br-8)",
-                marginBottom: "var(--space-16)",
-                overflow: "hidden",
-            }}
-        >
-            <HStack
-                style={{
-                    padding: "var(--space-8)",
-                    borderBottom: "1px solid var(--outline-dimmest)"
-                }}
-            >
-                {/* CONTRACT CONTENTS */}
-                <h1>{data.description}</h1>
-
-            </HStack>
-
-        </VStack>
-    );
-}
-
-let tempProvider = new ethers.providers.Web3Provider(window.ethereum);
-let tempSigner = tempProvider.getSigner();
-let tm = new ethers.Contract(ContractAdresses.TaskManager, TaskManager.abi, tempSigner);
 let initialized = false;
 
 export default function Dapp() {
     const walletAddress = useWalletAddress();
     const chainId = useChainId();
+    const [hasRole, setHasRole] = useState(false);
+
+    const { taskManager } = Contracts;
 
     const [taskDatas, setTaskDatas] = useState([]);
     useEffect(() => {
+        if (chainId != MARKETPLACE_CHAIN_ID) {
+            return;
+        }
+
         if (!initialized) {
             (async () => {
-                let resCount = await tm.getTasksCount();
+                let resCount = await taskManager.getTasksCount();
                 let datas = [];
                 for (let i = 0; i < resCount.toNumber(); i++) {
-                    let td = await tm.getTaskData(i);
+                    let td = await taskManager.getTaskData(i);
+                    td.taskId = i;
                     datas.push(td);
-                    console.log(td);
+                    // console.log(td);
                 }
                 setTaskDatas(datas);
                 // console.log('settaskdata');
@@ -276,12 +224,6 @@ export default function Dapp() {
         // console.log('effect');
     });
     // console.log('Dapp');
-
-    const [showError, setShowError] = useState(false);
-    const [errors, setErrors] = useState(null);
-    React.useEffect(() => {
-        setShowError(true);
-    }, [errors]);
 
     if (typeof window.ethereum === "undefined") {
         return (
@@ -325,109 +267,78 @@ export default function Dapp() {
         );
     }
 
+    if (chainId != "1" && chainId != MARKETPLACE_CHAIN_ID) {
+        console.log(chainId);
+        return (
+            <Wrapper>
+                <GlobalStyles />
+                <h1>
+                    Please change chain to the Dapp chain
+                </h1>
+            </Wrapper>
+        );
+    }
+
     return (
-        <Wrapper>
-            <GlobalStyles />
+        <BrowserRouter>
+            <Wrapper>
+                <GlobalStyles />
 
-            {/* HEADER */}
-            <HStack
-                className="main-header"
-                style={{
-                    width: "100%",
-                    justifyContent: "space-between",
-                    paddingBottom: "var(--space-16)",
-                }}
-            >
-                <VStack>
-                    <h1
-                        className="main-title"
-                        style={{ paddingBottom: "var(--space-8)" }}
-                    >
-                        Dapp 🤝 Ethereum
-                    </h1>
-                    {walletAddress && <ChainInfo chainId={chainId} />}
-                </VStack>
-
-                {walletAddress ? (
-                    <VStack style={{ alignItems: "end" }}>
-                        <HStack
-                            className="address-balance"
-                            style={{ alignItems: "center", paddingBottom: "var(--space-8)" }}
+                {/* HEADER */}
+                <HStack
+                    className="main-header"
+                    style={{
+                        width: "100%",
+                        justifyContent: "space-between",
+                        paddingBottom: "var(--space-16)",
+                    }}
+                >
+                    <VStack>
+                        <h1
+                            className="main-title"
+                            style={{ paddingBottom: "var(--space-8)" }}
                         >
-                            <Balance
-                                style={{ marginRight: "var(--space-16)" }}
-                                chainId={chainId}
-                                walletAddress={walletAddress}
-                            />
-                            <Address address={ethers.utils.getAddress(walletAddress)} />
-                        </HStack>
+                            Dapp 🤝 Ethereum
+                        </h1>
+                        {walletAddress && <ChainInfo chainId={chainId} />}
                     </VStack>
-                ) : (
-                    <button className="primary" onClick={() => { connect(); console.log('uck ', walletAddress); }}>
-                        Connect wallet
-                    </button>
-                )}
-            </HStack>
 
-            <Divider style={{ marginBottom: "var(--space-24)" }} />
+                    {walletAddress ? (
+                        <VStack style={{ alignItems: "end" }}>
+                            <HStack
+                                className="address-balance"
+                                style={{ alignItems: "center", paddingBottom: "var(--space-8)" }}
+                            >
+                                <Balance
+                                    style={{ marginRight: "var(--space-16)" }}
+                                    chainId={chainId}
+                                    walletAddress={walletAddress}
+                                />
+                                <Address address={ethers.utils.getAddress(walletAddress)} />
+                            </HStack>
+                        </VStack>
+                    ) : (
+                        <button className="primary" onClick={connect}>
+                            Connect wallet
+                        </button>
+                    )}
 
-            {/* DEPLOYMENT */}
-            <HStack
-                className="marketplace-header"
-                style={{
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingBottom: "var(--space-16)",
-                }}
-            >
-                <h2>Marketplace Tasks</h2>
-                <p>{taskDatas.length + ' tasks'}</p>
-            </HStack>
+                </HStack>
 
-            <VStack
-                className="marketplace-tasks"
-                style={{
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingBottom: "var(--space-16)",
-                }}
-            >
-                {taskDatas.map((taskData, k) => <TaskCard data={taskData.data} key={k} />)}
-            </VStack>
-        </Wrapper>);
-}
+                {!hasRole ? (<Link to="/register">Get role</Link>) : null}
 
-function useWalletAddress() {
-    const { ethereum } = window;
-    let addr = ethereum && ethereum.selectedAddress;
-    console.log('adresa ', addr);
-    const [address, setAddress] = useState(addr);
+                <Divider style={{ marginBottom: "var(--space-24)" }} />
 
-    useEffect(() => {
-        const onAddressChanged = (addresses) => setAddress(addresses[0]);
-        ethereum && ethereum.on("accountsChanged", onAddressChanged);
-        return () => {
-            ethereum && ethereum.removeListener("accountsChanged", onAddressChanged);
-        };
-    });
+                <Routes>
+                    <Route path='/' element={<Tasks taskDatas={taskDatas} />} />
+                    <Route path="/register" element={!hasRole ? <Outlet /> : <Navigate to="/" />}>
+                        <Route path='/register' element={<Register walletAddress={walletAddress} />} />
+                    </Route>
+                </Routes>
 
-    return address;
-}
-
-function useChainId() {
-    const { ethereum } = window;
-    const [chainId, setChainId] = useState((ethereum && ethereum.chainId) || "1");
-
-    useEffect(() => {
-        ethereum && ethereum.on("chainChanged", setChainId);
-        return () => {
-            ethereum && ethereum.removeListener("chainChanged", setChainId);
-        };
-    });
-
-    return parseInt(chainId);
+            </Wrapper>
+        </BrowserRouter>
+    );
 }
 
 // To detect MetaMask was installed

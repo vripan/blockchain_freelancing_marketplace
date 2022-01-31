@@ -1,6 +1,8 @@
-import styled, { createGlobalStyle } from "styled-components";
+import styled, {
+	createGlobalStyle
+} from "styled-components";
 
-export const GlobalStyles = createGlobalStyle`
+export const GlobalStyles = createGlobalStyle `
 	* {
 		box-sizing: border-box;
 	}
@@ -208,7 +210,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 `;
 
-export const UnstyledButton = styled.button`
+export const UnstyledButton = styled.button `
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,13 +220,14 @@ export const UnstyledButton = styled.button`
   background: transparent;
 `;
 
-export const OutlinedButton = styled(UnstyledButton)`
+export const OutlinedButton = styled(UnstyledButton)
+`
   font-weight: medium;
   border: 1px solid var(--bg-highest);
   background-color: var(--bg-root);
 `;
 
-export const Wrapper = styled.div`
+export const Wrapper = styled.div `
   display: flex;
   flex-direction: column;
   background-color: var(--bg-root);
@@ -235,27 +238,27 @@ export const Wrapper = styled.div`
   padding: var(--space-16);
 `;
 
-export const Card = styled.div`
+export const Card = styled.div `
   background-color: var(--bg-default);
 `;
 
-export const Dot = styled.div`
+export const Dot = styled.div `
   background: ${(props) => props.color};
   width: 6px;
   height: 6px;
   border-radius: 100px;
 `;
 
-export const VStack = styled.div`
+export const VStack = styled.div `
   display: flex;
   flex-direction: column;
 `;
-export const HStack = styled.div`
+export const HStack = styled.div `
   display: flex;
   flex-direction: row;
 `;
 
-export const Overlay = styled.div`
+export const Overlay = styled.div `
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,7 +273,7 @@ export const Overlay = styled.div`
   z-index: 1000;
 `;
 
-export const Divider = styled.div`
+export const Divider = styled.div `
   background-color: var(--outline-dimmest);
   height: 1px;
   width: 100%;
