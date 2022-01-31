@@ -1,28 +1,50 @@
-const MarketplaceApp = artifacts.require("MarketplaceApp")
-const Token = artifacts.require("Token")
+const TaskManager = artifacts.require("TaskManager");
+const CategoryManager = artifacts.require("CategoryManager");
+const MemberManager = artifacts.require("MemberManager");
+const Token = artifacts.require("Token");
+const fs = require("fs");
 
-module.exports = async function() {
-    mk = await MarketplaceApp.deployed()
-    tk = await Token.deployed()
+freelancers = []
+sponsors = []
+managers = []
+evaluators = []
 
-    await mk.addCategory("sad")
+module.exports = async function (callback) {
+    try {
+        categoryManager = await CategoryManager.deployed();
+        taskManager = await TaskManager.deployed();
+        memberManager = await MemberManager.deployed();
+        token = await Token.deployed();
 
-    await mk.getCategoriesCount()
+        let all_addresses = {
+            TaskManager: taskManager.address
+        };
+        let file = `
+            export default ${JSON.stringify(all_addresses)};`;
 
-    await mk.joinAsFreelancer({name:"sad", categoryId: 0})
-    await mk.joinAsManager({name:"sad", categoryId: 0}, {from:accounts[1]})
-    await mk.joinAsSponsor({name:"sad", categoryId: 0}, {from:accounts[2]})
+        fs.writeFile(__dirname + '/src/addresses.js', file, (err) => {
+            if (err) throw err;
+        });
 
-    await mk.addTask({description:"description", rewardFreelancer: 10, rewardEvaluator: 10, category: 0}, {from: accounts[1]})
+        await Promise.all([
+            categoryManager.addCategory("c1"),
+            categoryManager.addCategory("c2"),
+            categoryManager.addCategory("c3"),
+        ]);
 
-    tk.mint({from: accounts[2]})
+        await memberManager.joinAsManager({
+            name: 'eu'
+        });
 
-// await tk.approve(mk.address, 50, {from: accounts[2]})
-
-// tx = await mk.sponsorTask(0, 10, {from: accounts[2]});
+        tx = await taskManager.addTask({
+            description: "This is a description of the task",
+            rewardFreelancer: 10,
+            rewardEvaluator: 10,
+            category: 0
+        })
+    } catch (e) {
+        console.log(e);
+    } finally {
+        callback()
+    }
 }
-
-await mk.joinAsSponsor({name:"sad", categoryId: 0}, {from:accounts[3]})
-tk.mint({from: accounts[3]})
-
-await tk.approve(mk.address, 50, {from: accounts[3]})
