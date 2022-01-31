@@ -152,20 +152,6 @@ contract TaskManager
         }
 
         emit MarketplaceEntities.SponsorshipWidrawed(taskId, msg.sender, amount);
-
-        //  for(uint i=0; i<task.sponsors.length; i++)
-        //  {
-        //     if(task.sponsors[i].sponsor == msg.sender)
-        //     {
-        //         token.transfer(task.sponsors[i].sponsor, task.sponsors[i].amount);
-                
-        //         MarketplaceEntities.deleteFromArray(tasks[taskId].sponsors, i);
-
-        //         emit MarketplaceEntities.SponsorshipWidrawed(taskId, task.sponsors[i].sponsor, task.sponsors[i].amount);
-        //         return;
-        //     }
-        //  }
-        //  revert();
     }
 
     function linkEvaluatorToTask(uint taskId, address evaluator)
@@ -231,12 +217,7 @@ contract TaskManager
         }
 
         tasks[taskId].freelancersData.chosen = tasks[taskId].freelancersData.freelancers[freelancerIdx];
-        
-        // swap selected freelancer with the one at index 0
-        // address temp_address = tasks[taskId].freelancers[0];
-        // tasks[taskId].freelancers[0] = tasks[taskId].freelancers[freelancerIdx];
-        // tasks[taskId].freelancers[freelancerIdx] = temp_address;
-        
+
         updateTaskState(taskId, MarketplaceEntities.TaskState.WorkingOnIt);
 
         emit MarketplaceEntities.TaskFreelancerHired(taskId, tasks[taskId].freelancersData.chosen);
@@ -320,15 +301,6 @@ contract TaskManager
             address sponsorAddr = task.sponsorshipData.sponsors[i];
             token.transfer(sponsorAddr, task.sponsorshipData.sponsorship[sponsorAddr]);
         }
-
-        // todo: should keep sponsors list as history?
-
-        // while(tasks[taskId].sponsors.length != 0)
-        // {
-        //     uint idx = tasks[taskId].sponsors.length - 1;
-        //     token.transfer(tasks[taskId].sponsors[idx].sponsor, tasks[taskId].sponsors[idx].amount);
-        //     tasks[taskId].sponsors.pop();
-        // }
     }
 
     function requireSenderAllowance(uint amount)

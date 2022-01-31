@@ -178,6 +178,28 @@ contract MemberManager is Ownable
         return data;
     }
 
+    function getManagerInfo(address _address)
+        public
+        view
+        returns(MemberData.ManagerDataExtended memory)
+    {
+        MemberData.ManagerDataExtended memory data = managers[_address];
+        assert(bytes(data.data.name).length != 0);
+
+        return data;
+    }
+
+    function getSponsorInfo(address _address)
+        public
+        view
+        returns(MemberData.SponsorDataExtended memory)
+    {
+        MemberData.SponsorDataExtended memory data = sponsors[_address];
+        assert(bytes(data.data.name).length != 0);
+
+        return data;
+    }
+
     function getFreelancerInfo(address _address)
         public
         view

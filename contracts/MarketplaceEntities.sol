@@ -74,15 +74,4 @@ library MarketplaceEntities
     event TaskReviewed(uint taskId, bool accepted);
     event TaskReviewedByEvaluator(uint taskId, bool accepted);
     event TaskHiringTimeout(uint taskId);
-    // function deleteFromArray(SponsorshipInfo[] storage array, uint index)
-    //     public
-    // {
-    //     unchecked {
-    //         for(uint shIdx = index; shIdx < array.length - 1; shIdx++)
-    //         {
-    //             array[shIdx] = array[shIdx + 1];
-    //         }
-    //         array.pop();
-    //     }
-    // }
 }
