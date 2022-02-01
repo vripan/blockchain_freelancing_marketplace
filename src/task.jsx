@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import Contracts from './contracts';
 import { useParams } from 'react-router-dom';
 
-function EvaluatorActions({ state, taskId, taskData, setErrors, walletAddress }) {
+function EvaluatorActions({ state, taskId, taskData, addMessage, walletAddress }) {
     let { taskManager, TaskStateM } = Contracts;
 
     const review = (acceptResults) => {
         taskManager.reviewAsEvaluator(taskId, acceptResults)
-            .then(null)
-            .catch(e => setErrors([e]));
+            .then(() => addMessage("Reviewed task succesfully"))
+            .catch(addMessage);
     }
 
     if (state == TaskStateM.WaitingForEvaluation && walletAddress.toUpperCase() == taskData.evaluator.toUpperCase()) {
@@ -48,26 +48,31 @@ function EvaluatorActions({ state, taskId, taskData, setErrors, walletAddress })
     return 'No actions to take at this time';
 }
 
-function FreelancerCard({ info, onClick }) {
+function FreelancerCard({ info, onClick, isManager }) {
     return (
-        <VStack
+        <HStack
             onClick={onClick}
-            style={{
-                alignItems: 'space-between',
-                display: "flex",
-                justifyContent: "space-around",
-                flexDirection: "row",
-                cursor: "pointer",
-            }}
+            style={isManager
+                ? {
+                    alignItems: 'space-between',
+                    display: "flex",
+                    justifyContent: "space-around",
+                    flexDirection: "row",
+                    cursor: "pointer",
+                } : {}
+            }
         >
             {'Name: ' + info.name}
+            {' '}
             <span style={{ color: 'yellow' }}>
                 {'Rep: ' + info.rep}
             </span>
-            <span style={{ color: 'greenyellow' }}>
-                Accept this frelancer
-            </span>
-        </VStack>
+            {isManager &&
+                (<span style={{ color: 'greenyellow' }}>
+                    Accept this frelancer
+                </span>)
+            }
+        </HStack>
     );
 }
 
@@ -91,7 +96,7 @@ function EvaluatorCard({ info, onClick }) {
     );
 }
 
-function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
+function ManagerActions({ state, categoryId, taskId, taskData, addMessage }) {
     let { taskManager, TaskStateM, memberManager } = Contracts;
     const [evaluators, setEvaluators] = useState(null);
     const [freelancers, setFreelancers] = useState(null);
@@ -115,7 +120,7 @@ function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
         }
         if (freelancers == null) {
             (async () => {
-                let freeAdresses = await taskData.freelancersData.freelancers;
+                let freeAdresses = taskData.freelancersData.freelancers;
                 let fr = [];
 
                 for (let i = 0; i < freeAdresses.length; i++) {
@@ -133,23 +138,59 @@ function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
         }
     });
 
+    const deleteTask = () => {
+        taskManager.removeTask(taskId)
+            .then(() => {
+                addMessage("Task Removed", "Home")
+            })
+            .catch(addMessage);
+    };
     const chooseEvaluator = (evaluatorAddress) => {
         taskManager.linkEvaluatorToTask(taskId, evaluatorAddress)
-            .then(() => setEvaluators(null))
-            .catch(e => setErrors([e]));
+            .then(() => {
+                setEvaluators(null);
+                addMessage("Evaluator chosen", "Success")
+            })
+            .catch(addMessage);
     };
     const chooseFreelancer = (freelancer) => {
         taskManager.hireFreelancer(taskId, freelancer.idx)
-            .then(() => setFreelancers(null))
-            .catch(e => setErrors([e]));
+            .then(() => {
+                setFreelancers(null);
+                addMessage("Freelancer chosen", "Success");
+            })
+            .catch(addMessage);
     };
     const chooseAccept = (acceptResults) => {
         taskManager.reviewTask(taskId, acceptResults)
-            .then(null)
-            .catch(e => setErrors([e]));
+            .then(() => {
+                if (acceptResults) {
+                    addMessage("Accepted task", "Success")
+                }
+                else {
+                    addMessage("Did not accept task", "Success")
+                }
+            })
+            .catch(addMessage);
     }
     console.log('b');
 
+    if (state == TaskStateM.NotFounded) {
+        return (
+            <Container>
+                <VStack>
+                    <p>
+                        No actions required at this time.
+                    </p>
+                </VStack>
+                <OutlinedButton
+                    onClick={deleteTask}
+                >
+                    Delete task
+                </OutlinedButton>
+            </Container>
+        );
+    }
     if (state == TaskStateM.Funded) {
         return (
             <Container>
@@ -160,7 +201,7 @@ function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
                             info={el}
                             onClick={() => chooseEvaluator(el.address)}
                         />))
-                    : ('No evaluators are available for this category')
+                    : ('No evaluators are available for this category or none have applied')
                 )}
             </Container>
         );
@@ -174,6 +215,7 @@ function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
                             key={k}
                             info={el}
                             onClick={() => chooseFreelancer(el)}
+                            isManager={true}
                         />))
                     : ('No freelancers are available for this category')
                 )}
@@ -215,7 +257,7 @@ function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
 }
 
 // de testat freelancer-ul
-function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
+function FreelancerActions({ walletAddress, state, taskData, addMessage }) {
     let { taskManager, TaskStateM, tokenC } = Contracts;
     let rewardEvaluator = taskData.data.rewardEvaluator;
 
@@ -224,29 +266,29 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
             .then((currentAllowance) => {
                 const goApply = () => {
                     taskManager.applyForTask(taskData.taskId)
-                        .then((res) => {
-                            console.log(res);
+                        .then(() => {
+                            addMessage("Applied for task Succesful", "Success");
                         })
-                        .catch((e) => setErrors([e]));
+                        .catch(addMessage);
                 };
 
                 if (currentAllowance.toNumber() < rewardEvaluator.toNumber()) {
                     tokenC.approve(taskManager.address, rewardEvaluator.toNumber())
                         .then(goApply)
-                        .catch((e) => setErrors([e]));
+                        .catch(addMessage);
                 }
                 else {
                     goApply();
                 }
             })
-            .catch((e) => setErrors([e]));
+            .catch(addMessage);
     };
     const finish = () => {
         taskManager.finishTask(taskData.taskId)
-            .then((res) => {
-                console.log(res);
+            .then(() => {
+                addMessage("Notified finished task", "Success");
             })
-            .catch((e) => setErrors([e]));
+            .catch(addMessage);
     };
     if (state == TaskStateM.Ready && undefined == taskData.freelancersData.freelancers.find(el => el.toUpperCase() == walletAddress.toUpperCase())) {
         return (
@@ -291,7 +333,7 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
     return 'No actions to take at this time';
 }
 
-function SponsorActions({ walletAddress, taskData, state, setErrors }) {
+function SponsorActions({ walletAddress, taskData, state, addMessage }) {
     let { taskManager, TaskStateM, tokenC } = Contracts;
     const [tokenAmount, setTokenAmount] = useState('0');
 
@@ -305,31 +347,31 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
 
                 const goSponsor = () => {
                     taskManager.sponsorTask(taskData.taskId, parseInt(tokenAmount))
-                        .then((res) => {
-                            console.log(res);
+                        .then(() => {
                             setTokenAmount("0");
+                            addMessage("Sponsored task", "Success");
                         })
-                        .catch((e) => setErrors([e]));
+                        .catch(addMessage);
                 }
 
                 if (currentAllowance.toNumber() < parseInt(tokenAmount)) {
                     tokenC.approve(taskManager.address, parseInt(tokenAmount))
                         .then(goSponsor)
-                        .catch((e) => setErrors([e]));
+                        .catch(addMessage);
                 }
                 else {
                     goSponsor();
                 }
             })
-            .catch((e) => setErrors([e]));
+            .catch(addMessage);
     };
     const withdraw = () => {
         taskManager.withdrawSponsorship(taskData.taskId)
-            .then((res) => {
-                console.log(res);
+            .then(() => {
+                addMessage("Withdrew from task", "Success");
                 setTokenAmount("0");
             })
-            .catch((e) => setErrors([e]));
+            .catch(addMessage);
     };
 
     if (state == TaskStateM.NotFounded) {
@@ -383,84 +425,131 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
     return 'No actions to take at this time';
 }
 
-export default function Task({ walletAddress, taskDatas, role, setErrors }) {
+export default function Task({ walletAddress, taskDatas, role, addMessage }) {
     let { memberManager, taskManager, TaskState, TaskStateM, categoryManager } = Contracts;
     const params = useParams();
     const { taskId } = params;
     const [managerName, setManagerName] = useState('Loading...');
     const [categoryName, setCategoryName] = useState('Loading...');
     const [evaluatorName, setEvaluatorName] = useState('Loading...');
+    const [freelancers, setFreelancers] = useState(null);
 
+    let taskData = taskDatas?.find(data => data.taskId == taskId);
     useEffect(() => {
         if (evaluatorName == 'Loading...' &&
-            (taskDatas && taskId < taskDatas[taskId].length) &&
+            taskDatas &&
             taskData.evaluator == 0) {
             setEvaluatorName(undefined);
         }
     });
+    useEffect(() => {
+        if (freelancers == null && taskData) {
+            (async () => {
+                let freeAdresses = taskData.freelancersData.freelancers;
+                let fr = [];
 
-    if (!taskDatas || taskId >= taskDatas.length) {
+                for (let i = 0; i < freeAdresses.length; i++) {
+                    let info = await memberManager.getFreelancerInfo(freeAdresses[i]);
+                    let data = info.data;
+                    data.address = freeAdresses[i];
+                    data.rep = info.rep;
+                    data.idx = i;
+                    fr.push(data);
+                }
+                setFreelancers(fr);
+            })();
+        }
+    });
+
+
+    if (!taskData) {
         return 'Not found task';
     }
-    let taskData = taskDatas[taskId];
+
     let state = taskData.state;
+    if (state == TaskStateM.Unknown) {
+        return "This task has been deleted";
+    }
 
     memberManager.getManagerInfo(taskData.manager)
-        .then((info) => setManagerName(info.data.name))
-        .catch(e => setErrors([e]));
+        .then((info) => {
+            setManagerName(info.data.name)
+        })
+        .catch(addMessage);
 
     categoryManager.getCategoryName(taskData.data.category)
         .then(setCategoryName)
-        .catch(e => setErrors([e]));
+        .catch(addMessage);
 
     if (taskData.evaluator != 0) {
         memberManager.getEvaluatorInfo(taskData.evaluator)
             .then(info => info && setEvaluatorName(info.data.name))
-            .catch(e => setErrors([e]));
+            .catch(addMessage);
     }
-    console.log('a');
+    console.log('c');
+
     return (
         <VStack>
-            <h1>{'Task #' + taskId}</h1>
-            <h3
+            <Container
                 style={{
-                    color: 'gray'
+                    backgroundColor: "var(--bg-default)",
                 }}
             >
-                Description: {' ' + taskData.data.description}
-            </h3>
-            <p style={{
-                marginBottom: "var(--space-8)",
-            }}>
-                {'Category: ' + categoryName}
-            </p>
-            <p style={{
-                marginBottom: "var(--space-8)",
-            }}>
-                {'State: ' + TaskState[state]}
-            </p>
-            <p style={{
-                marginBottom: "var(--space-8)",
-            }}>
-                {'Manager: ' + managerName}
-            </p>
-            <p style={{
-                marginBottom: "var(--space-8)",
-            }}>
-                {'Funding goal: ' + (taskData.data.rewardFreelancer.toNumber() + taskData.data.rewardEvaluator.toNumber())}
-            </p>
-            <p style={{
-                marginBottom: "var(--space-8)",
-            }}>
-                {'Funded: ' + taskData.sponsorshipData.totalAmount}
-            </p>
-            {evaluatorName && (
+                <h1
+                    style={{
+                        color: 'orange'
+                    }}
+                >
+                    {'Task #' + taskId}
+                </h1>
+                <h3
+                    style={{
+                        color: 'gray'
+                    }}
+                >
+                    Description: {' ' + taskData.data.description}
+                </h3>
                 <p style={{
                     marginBottom: "var(--space-8)",
                 }}>
-                    {'Evaluator: ' + evaluatorName}
+                    {'Category: ' + categoryName}
                 </p>
-            )}
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'State: ' + TaskState[state]}
+                </p>
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'Manager: ' + managerName + ' Adress: ' + taskData.manager}
+                </p>
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'Funding goal: ' + (taskData.data.rewardFreelancer.toNumber() + taskData.data.rewardEvaluator.toNumber())}
+                </p>
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'Funded: ' + taskData.sponsorshipData.totalAmount}
+                </p>
+                {evaluatorName && (
+                    <p style={{
+                        marginBottom: "var(--space-8)",
+                    }}>
+                        {'Evaluator: ' + evaluatorName}
+                    </p>
+                )}
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'Freelancers: '}
+                </p>
+                {freelancers && freelancers.map((info, k) => {
+                    return (<FreelancerCard key={k} info={info} isManager={false} />);
+                })}
+            </Container>
 
             {/* Action section */}
             {role == memberManager.Role.Freelancer ? (
@@ -474,7 +563,7 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
                     </h4>
                     <FreelancerActions
                         state={state}
-                        setErrors={setErrors}
+                        addMessage={addMessage}
                         taskData={taskData}
                         walletAddress={walletAddress}
                     />
@@ -495,7 +584,7 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
                             walletAddress={walletAddress}
                             taskData={taskData}
                             state={state}
-                            setErrors={setErrors}
+                            addMessage={addMessage}
                         />
                     </VStack>
                 ) : null
@@ -514,7 +603,7 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
                         taskData={taskData}
                         categoryId={taskData.data.category}
                         state={state}
-                        setErrors={setErrors}
+                        addMessage={addMessage}
                     />
                 </VStack>
             ) : null}
@@ -531,7 +620,7 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
                         taskId={taskId}
                         taskData={taskData}
                         state={state}
-                        setErrors={setErrors}
+                        addMessage={addMessage}
                         walletAddress={walletAddress}
                     />
                 </VStack>

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Contracts from './contracts';
 import Categories from './components/categories';
 
-export default function Register({ walletAddress, setErrors }) {
+export default function Register({ walletAddress, addMessage }) {
     let { memberManager } = Contracts;
 
     let [role, setRole] = useState(null);
@@ -84,9 +84,9 @@ export default function Register({ walletAddress, setErrors }) {
                 return;
             }
             setRole(selectionRoleId);
-
+            addMessage("Transaction Accepted to join", "Success");
         } catch (e) {
-            setErrors([e]);
+            addMessage(e);
         }
     }
 

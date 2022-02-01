@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Categories from './components/categories';
 import Contracts from './contracts';
 
-export default function CreateTask({ walletAddress, setErrors }) {
+export default function CreateTask({ walletAddress, addMessage }) {
     const { taskManager } = Contracts;
 
     let [description, setDescription] = useState('');
@@ -13,15 +13,15 @@ export default function CreateTask({ walletAddress, setErrors }) {
 
     function createTask() {
         if (description == '') {
-            setErrors(['Description cannot be empty']);
+            addMessage('Description cannot be empty');
             return;
         }
         if (rewardFreelancer == '') {
-            setErrors(['Reward Freelancer cannot be empty']);
+            addMessage('Reward Freelancer cannot be empty');
             return;
         }
         if (rewardEvaluator == '') {
-            setErrors(['Reward Evaluator cannot be empty']);
+            addMessage('Reward Evaluator cannot be empty');
             return;
         }
 
@@ -34,8 +34,9 @@ export default function CreateTask({ walletAddress, setErrors }) {
             .then(async (tx) => {
                 let rec = await tx.wait();
                 console.log(rec.events.find(x => x.event == "TaskAdded"));
+                addMessage("Added task", "Home");
             })
-            .catch((e) => setErrors([e]));
+            .catch(addMessage);
     }
 
     return (

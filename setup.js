@@ -27,23 +27,31 @@ async function register_user(memberManager, token, wallet, name, new_role, categ
             await memberManager.joinAsFreelancer({
                 name: name,
                 categoryId: category
-            }, { from: wallet });
+            }, {
+                from: wallet
+            });
             break;
         case Role.Manager:
             await memberManager.joinAsManager({
                 name: name
-            }, { from: wallet });
+            }, {
+                from: wallet
+            });
             break;
         case Role.Sponsor:
             await memberManager.joinAsSponsor({
                 name: name
-            }, { from: wallet });
+            }, {
+                from: wallet
+            });
             break;
         case Role.Evaluator:
             await memberManager.joinAsEvaluator({
                 name: name,
                 categoryId: category
-            }, { from: wallet });
+            }, {
+                from: wallet
+            });
             break;
     }
 }
@@ -100,6 +108,8 @@ async function setup() {
         rewardFreelancer: 10,
         rewardEvaluator: 10,
         category: 0
+    }, {
+        from: accounts[1]
     })
 
     await taskManager.addTask({
@@ -107,6 +117,8 @@ async function setup() {
         rewardFreelancer: 5,
         rewardEvaluator: 3,
         category: 1
+    }, {
+        from: accounts[1]
     })
 
 }

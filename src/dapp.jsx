@@ -3,7 +3,7 @@ import * as ethers from "ethers";
 import { getChainByChainId } from "evm-chains";
 import microtip from "microtip/microtip.css";
 import { X, ChevronRight, Upload, Eye, Edit2, Play } from "react-feather";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from "react-router-dom";
 
 import { GlobalStyles, VStack, HStack, Wrapper, Divider, UnstyledButton, OutlinedButton, Card, Dot, Overlay } from './styles';
 
@@ -28,6 +28,8 @@ function useWalletAddress(setRole) {
         const onAddressChanged = (addresses) => {
             setAddress(addresses[0]);
             setRole(null);
+
+            location.reload();
         };
         ethereum && ethereum.on("accountsChanged", onAddressChanged);
         return () => {
@@ -120,7 +122,7 @@ function useBalance(address, chainId) {
     return balance;
 }
 
-function Balance({ walletAddress, chainId }) {
+function Balance({ walletAddress, chainId, tokenC }) {
     const balance = useBalance(walletAddress, chainId);
     const tokens = useTokens(walletAddress, chainId);
 
@@ -130,7 +132,16 @@ function Balance({ walletAddress, chainId }) {
 
     return (
         <span style={{ marginRight: "var(--space-8)", whiteSpace: "nowrap" }}>
-            {tokens + ' '}<span style={{ color: 'orange' }}>TKN</span>
+            {tokens + ' '}
+            <span
+                style={{ cursor: "pointer", color: 'orange' }}
+                onClick={() => copy(tokenC.address)}
+                aria-label="Copy token address"
+                data-microtip-position="bottom"
+                role="tooltip"
+            >
+                TKN
+            </span>
             {' ' + ethers.utils.formatEther(balance).slice(0, 6) + ' ETH'}
         </span>
     );
@@ -247,12 +258,10 @@ function ChainInfo({ chainId }) {
 }
 
 export default function Dapp() {
-    const { taskManager, memberManager } = Contracts;
+    const { taskManager, memberManager, tokenC } = Contracts;
 
     const [role, setRole] = useState(null);
     const [taskDatas, setTaskDatas] = useState(null);
-    const [showError, setShowError] = useState(false);
-    const [errors, setErrors] = useState(null);
 
     const walletAddress = useWalletAddress(setRole);
     // DEVELOPMENT!!! const chainId = useChainId();
@@ -266,10 +275,14 @@ export default function Dapp() {
 
         if (!taskDatas) {
             (async () => {
-                let resCount = await taskManager.getTasksCount();
+                let resCount = (await taskManager.getTasksCount()).toNumber();
                 let datas = [];
-                for (let i = 0; i < resCount.toNumber(); i++) {
+                for (let i = 0; i < resCount; i++) {
                     let td = await taskManager.getTaskData(i);
+                    if (td.state == 0) {
+                        resCount++;
+                        continue;
+                    }
                     td.taskId = i;
                     datas.push(td);
                     // console.log(td);
@@ -288,9 +301,38 @@ export default function Dapp() {
         // console.log('effect');
     });
 
+    const [showError, setShowError] = useState(false);
+    const [errors, setErrors] = useState(null);
+    const [showInfos, setShowInfos] = useState(false);
+    const [infos, setInfos] = useState(null);
+    const [lastType, setLastType] = useState(null);
+
     useEffect(() => {
         setShowError(true);
     }, [errors]);
+    useEffect(() => {
+        setShowInfos(true);
+    }, [infos]);
+
+    function addMessage(msg, type = "Error") {
+        if (type == "Error") {
+            let errA = errors;
+            if (!errA) {
+                errA = [];
+            }
+            errA.push(msg);
+            setErrors(errA);
+        }
+        else {
+            let infA = infos;
+            if (!infA) {
+                infA = [];
+            }
+            infA.push(msg);
+            setInfos(infA);
+        }
+        setLastType(type);
+    }
 
     if (typeof window.ethereum === "undefined") {
         return (
@@ -352,37 +394,78 @@ export default function Dapp() {
 
                 {/* MESSAGE DIALOG 
 			    automatically opens on error but can be reopened with the error button
-			    */}
-                {errors && showError ? (
-                    <Overlay>
-                        <VStack
-                            style={{
-                                width: "75%",
-                                maxWidth: "400px",
-                                backgroundColor: "var(--bg-default)",
-                                border: "1px solid var(--outline-default)",
-                                padding: "var(--space-16)",
-                                borderRadius: "var(--br-8)",
-                            }}
-                        >
-                            <HStack
+                */}
+                <>
+                    {errors && showError ? (
+                        <Overlay>
+                            <VStack
                                 style={{
-                                    width: "100%",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
+                                    width: "75%",
+                                    maxWidth: "400px",
+                                    backgroundColor: "var(--bg-default)",
+                                    border: "1px solid var(--outline-default)",
+                                    padding: "var(--space-16)",
+                                    borderRadius: "var(--br-8)",
                                 }}
                             >
-                                <h1>Error</h1>
-                                <UnstyledButton onClick={() => setShowError(false)}>
-                                    <X size={16} />
-                                </UnstyledButton>
-                            </HStack>
-                            <pre className="code-error">
-                                {errors.map((e) => e.formattedMessage || e.message || e).join("\n\n")}
-                            </pre>
-                        </VStack>
-                    </Overlay>
-                ) : null}
+                                <HStack
+                                    style={{
+                                        width: "100%",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <h1>Error</h1>
+                                    <UnstyledButton onClick={() => setShowError(false)}>
+                                        <X size={16} />
+                                    </UnstyledButton>
+                                </HStack>
+                                <pre className="code-error">
+                                    {errors.map((e) => e.formattedMessage || e.message || e).join("\n\n")}
+                                </pre>
+                            </VStack>
+                        </Overlay>
+                    ) : null}
+
+                    {infos && showInfos ? (
+                        <Overlay>
+                            <VStack
+                                style={{
+                                    width: "75%",
+                                    maxWidth: "400px",
+                                    backgroundColor: "var(--bg-default)",
+                                    border: "1px solid var(--outline-default)",
+                                    padding: "var(--space-16)",
+                                    borderRadius: "var(--br-8)",
+                                }}
+                            >
+                                <HStack
+                                    style={{
+                                        width: "100%",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <h1>Success</h1>
+                                    <UnstyledButton onClick={() => {
+                                        setShowInfos(false);
+                                        if (lastType == "Home") {
+                                            location.replace("/");
+                                        }
+                                        else {
+                                            location.reload();
+                                        }
+                                    }}>
+                                        <X size={16} />
+                                    </UnstyledButton>
+                                </HStack>
+                                <pre style={{ color: 'green' }}>
+                                    {infos.join("\n\n")}
+                                </pre>
+                            </VStack>
+                        </Overlay>
+                    ) : null}
+                </>
 
                 {/* HEADER */}
                 <HStack
@@ -420,6 +503,7 @@ export default function Dapp() {
                                     style={{ marginRight: "var(--space-16)" }}
                                     chainId={chainId}
                                     walletAddress={walletAddress}
+                                    tokenC={tokenC}
                                 />
                                 <Address address={ethers.utils.getAddress(walletAddress)} />
                             </HStack>
@@ -446,7 +530,7 @@ export default function Dapp() {
                         }}
                     >
                         <OutlinedButton>
-                            {!role ? ('Join the market') : ('You have joined the market!')}
+                            {!role ? ('Join the market') : ('Your role is: ' + Object.keys(memberManager.Role).find(key => memberManager.Role[key] === role))}
                         </OutlinedButton>
                     </Link>
 
@@ -472,7 +556,7 @@ export default function Dapp() {
                     <Route path='/register' element={
                         <Register
                             walletAddress={walletAddress}
-                            setErrors={setErrors}
+                            addMessage={addMessage}
                         />}
                     />
                     <Route path='/tasks/:taskId' element={
@@ -480,10 +564,10 @@ export default function Dapp() {
                             taskDatas={taskDatas}
                             role={role}
                             walletAddress={walletAddress}
-                            setErrors={setErrors}
+                            addMessage={addMessage}
                         />
                     } />
-                    <Route path='/create' element={<CreateTask setErrors={setErrors} />} />
+                    <Route path='/create' element={<CreateTask addMessage={addMessage} />} />
                 </Routes>
 
             </Wrapper>
