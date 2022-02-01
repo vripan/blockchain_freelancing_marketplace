@@ -12,8 +12,10 @@ Role = {
     Evaluator: 4
 }
 
-async function register_user(memberManager, wallet, name, new_role, category = 0) {
+async function register_user(memberManager, token, wallet, name, new_role, category = 0) {
     role = await memberManager.getRole(wallet)
+
+    await token.mint({ from: wallet });
 
     if (role != 0) {
         console.log("Wallet already registered with " + role + " and new role " + new_role);
@@ -89,14 +91,14 @@ async function setup() {
     // add members
     //
     await Promise.all([
-        register_user(memberManager, accounts[1], "Manager [1]", Role.Manager),
-        register_user(memberManager, accounts[2], "Manager [2]", Role.Manager),
-        register_user(memberManager, accounts[3], "Freelancer [3]", Role.Freelancer, 1),
-        register_user(memberManager, accounts[4], "Freelancer [4]", Role.Freelancer, 1),
-        register_user(memberManager, accounts[5], "Sponsor [5]", Role.Sponsor),
-        register_user(memberManager, accounts[6], "Sponsor [6]", Role.Sponsor),
-        register_user(memberManager, accounts[7], "Evaluator [7]", Role.Evaluator, 1),
-        register_user(memberManager, accounts[8], "Evaluator [8]", Role.Evaluator, 1),
+        register_user(memberManager, token, accounts[1], "Manager [1]", Role.Manager),
+        register_user(memberManager, token, accounts[2], "Manager [2]", Role.Manager),
+        register_user(memberManager, token, accounts[3], "Freelancer [3]", Role.Freelancer, 1),
+        register_user(memberManager, token, accounts[4], "Freelancer [4]", Role.Freelancer, 1),
+        register_user(memberManager, token, accounts[5], "Sponsor [5]", Role.Sponsor),
+        register_user(memberManager, token, accounts[6], "Sponsor [6]", Role.Sponsor),
+        register_user(memberManager, token, accounts[7], "Evaluator [7]", Role.Evaluator, 1),
+        register_user(memberManager, token, accounts[8], "Evaluator [8]", Role.Evaluator, 1),
     ])
 
     // add test tasks
