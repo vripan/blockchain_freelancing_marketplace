@@ -1,9 +1,15 @@
 import { Link } from "react-router-dom";
 import { HStack, VStack } from '../styles';
 import Contracts from '../contracts';
+import { useState } from 'react';
 
-export default function TaskCard({ taskData }) {
-    const { TaskState } = Contracts;
+export default function TaskCard({ taskData, }) {
+    const { TaskState, categoryManager } = Contracts;
+    const [categoryName, setCategoryName] = useState('Loading...');
+
+    categoryManager.getCategoryName(taskData.data.category)
+        .then(setCategoryName)
+        .catch(null);
 
     return (
         <Link
@@ -48,7 +54,16 @@ export default function TaskCard({ taskData }) {
                     }}
                 >
                     <h3>{taskData.data.description}</h3>
+
                 </HStack>
+                <p
+                    style={{
+                        padding: "var(--space-8)",
+                        color: 'pink'
+                    }}
+                >
+                    {'Category: ' + categoryName}
+                </p>
 
             </VStack>
         </Link>

@@ -530,7 +530,7 @@ export default function Dapp() {
                         }}
                     >
                         <OutlinedButton>
-                            {!role ? ('Join the market') : ('See market role')}
+                            {!role ? ('Join the market') : ('Your role is: ' + Object.keys(memberManager.Role).find(key => memberManager.Role[key] === role))}
                         </OutlinedButton>
                     </Link>
 

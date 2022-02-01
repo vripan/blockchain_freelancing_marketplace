@@ -495,7 +495,13 @@ export default function Task({ walletAddress, taskDatas, role, addMessage }) {
                     backgroundColor: "var(--bg-default)",
                 }}
             >
-                <h1>{'Task #' + taskId}</h1>
+                <h1
+                    style={{
+                        color: 'orange'
+                    }}
+                >
+                    {'Task #' + taskId}
+                </h1>
                 <h3
                     style={{
                         color: 'gray'
