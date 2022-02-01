@@ -91,7 +91,7 @@ async function setup() {
         register_user(memberManager, accounts[8], "Evaluator [8]", Role.Evaluator, 1),
     ])
 
-    // add test task
+    // add test tasks
     //
     await taskManager.addTask({
         description: "Integrate build environment with GithHub Actions",
@@ -99,6 +99,14 @@ async function setup() {
         rewardEvaluator: 10,
         category: 0
     })
+
+    await taskManager.addTask({
+        description: "Analyze CVE-2021-44228: Log4j exploit",
+        rewardFreelancer: 5,
+        rewardEvaluator: 3,
+        category: 1
+    })
+
 }
 
 module.exports = async function (callback) {
