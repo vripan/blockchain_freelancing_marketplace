@@ -3,6 +3,74 @@ import { useEffect, useState } from 'react';
 import Contracts from './contracts';
 import { useParams } from 'react-router-dom';
 
+function EvaluatorActions({ state, taskId, taskData, setErrors, walletAddress }) {
+    let { taskManager, TaskStateM } = Contracts;
+
+    const review = (acceptResults) => {
+        taskManager.reviewAsEvaluator(taskId, acceptResults)
+            .then(null)
+            .catch(e => setErrors([e]));
+    }
+
+    if (state == TaskStateM.WaitingForEvaluation && walletAddress.toUpperCase() == taskData.evaluator.toUpperCase()) {
+        return (
+            <Container>
+                <HStack
+                    style={{
+                        alignItems: 'space-between',
+                        display: "flex",
+                        justifyContent: "space-around",
+                        flexDirection: "row",
+                    }}
+                >
+                    <span
+                        style={{
+                            cursor: "pointer",
+                            color: "green"
+                        }}
+                        onClick={() => review(true)}
+                    >
+                        Accept
+                    </span>
+                    <span
+                        style={{
+                            cursor: "pointer",
+                            color: "red"
+                        }}
+                        onClick={() => review(false)}
+                    >
+                        Reject
+                    </span>
+                </HStack>
+            </Container>
+        )
+    }
+    return 'No actions to take at this time';
+}
+
+function FreelancerCard({ info, onClick }) {
+    return (
+        <VStack
+            onClick={onClick}
+            style={{
+                alignItems: 'space-between',
+                display: "flex",
+                justifyContent: "space-around",
+                flexDirection: "row",
+                cursor: "pointer",
+            }}
+        >
+            {'Name: ' + info.name}
+            <span style={{ color: 'yellow' }}>
+                {'Rep: ' + info.rep}
+            </span>
+            <span style={{ color: 'greenyellow' }}>
+                Accept this frelancer
+            </span>
+        </VStack>
+    );
+}
+
 function EvaluatorCard({ info, onClick }) {
     return (
         <HStack
@@ -23,20 +91,19 @@ function EvaluatorCard({ info, onClick }) {
     );
 }
 
-function ManagerActions({ state, categoryId, taskId, setErrors }) {
+function ManagerActions({ state, categoryId, taskId, taskData, setErrors }) {
     let { taskManager, TaskStateM, memberManager } = Contracts;
     const [evaluators, setEvaluators] = useState(null);
+    const [freelancers, setFreelancers] = useState(null);
 
     useEffect(() => {
         if (evaluators == null) {
             (async () => {
                 let evalAdresses = await memberManager.getEvaluatorsArray();
                 let ea = [];
-                console.log(evalAdresses);
 
                 for (let i = 0; i < evalAdresses.length; i++) {
                     let info = await memberManager.getEvaluatorInfo(evalAdresses[i]);
-                    console.log(info);
                     if (info.data.categoryId.toNumber() == categoryId) {
                         let data = info.data;
                         data.address = evalAdresses[i];
@@ -46,6 +113,24 @@ function ManagerActions({ state, categoryId, taskId, setErrors }) {
                 setEvaluators(ea);
             })();
         }
+        if (freelancers == null) {
+            (async () => {
+                let freeAdresses = await taskData.freelancersData.freelancers;
+                let fr = [];
+
+                for (let i = 0; i < freeAdresses.length; i++) {
+                    let info = await memberManager.getFreelancerInfo(freeAdresses[i]);
+                    if (info.data.categoryId.toNumber() == categoryId) {
+                        let data = info.data;
+                        data.address = freeAdresses[i];
+                        data.rep = info.rep;
+                        data.idx = i;
+                        fr.push(data);
+                    }
+                }
+                setFreelancers(fr);
+            })();
+        }
     });
 
     const chooseEvaluator = (evaluatorAddress) => {
@@ -53,6 +138,16 @@ function ManagerActions({ state, categoryId, taskId, setErrors }) {
             .then(() => setEvaluators(null))
             .catch(e => setErrors([e]));
     };
+    const chooseFreelancer = (freelancer) => {
+        taskManager.hireFreelancer(taskId, freelancer.idx)
+            .then(() => setFreelancers(null))
+            .catch(e => setErrors([e]));
+    };
+    const chooseAccept = (acceptResults) => {
+        taskManager.reviewTask(taskId, acceptResults)
+            .then(null)
+            .catch(e => setErrors([e]));
+    }
     console.log('b');
 
     if (state == TaskStateM.Funded) {
@@ -70,7 +165,53 @@ function ManagerActions({ state, categoryId, taskId, setErrors }) {
             </Container>
         );
     }
-    return null;
+    if (state == TaskStateM.Ready) {
+        return (
+            <Container>
+                {freelancers && (freelancers.length != 0
+                    ? (freelancers.map((el, k) =>
+                        <FreelancerCard
+                            key={k}
+                            info={el}
+                            onClick={() => chooseFreelancer(el)}
+                        />))
+                    : ('No freelancers are available for this category')
+                )}
+            </Container>
+        );
+    }
+    if (state == TaskStateM.Finished) {
+        return (
+            <Container>
+                <HStack
+                    style={{
+                        alignItems: 'space-between',
+                        display: "flex",
+                        justifyContent: "space-around",
+                        flexDirection: "row",
+                    }}
+                >
+                    <span
+                        style={{
+                            cursor: "pointer",
+                            color: "green"
+                        }}
+                        onClick={() => chooseAccept(true)}
+                    >Accept</span>
+                    <span
+                        style={{
+                            cursor: "pointer",
+                            color: "red"
+                        }}
+                        onClick={() => chooseAccept(false)}
+                    >
+                        Reject
+                    </span>
+                </HStack>
+            </Container>
+        )
+    }
+    return 'No actions to take at this time';
 }
 
 // de testat freelancer-ul
@@ -81,6 +222,14 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
     const apply = () => {
         tokenC.allowance(walletAddress, taskManager.address)
             .then((currentAllowance) => {
+                const goApply = () => {
+                    taskManager.applyForTask(taskData.taskId)
+                        .then((res) => {
+                            console.log(res);
+                        })
+                        .catch((e) => setErrors([e]));
+                };
+
                 if (currentAllowance.toNumber() < rewardEvaluator.toNumber()) {
                     tokenC.approve(taskManager.address, rewardEvaluator.toNumber())
                         .then(goApply)
@@ -89,14 +238,6 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
                 else {
                     goApply();
                 }
-
-                const goApply = () => {
-                    taskManager.applyTask(taskData.taskId)
-                        .then((res) => {
-                            console.log(res);
-                        })
-                        .catch((e) => setErrors([e]));
-                };
             })
             .catch((e) => setErrors([e]));
     };
@@ -107,8 +248,7 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
             })
             .catch((e) => setErrors([e]));
     };
-
-    if (state == TaskStateM.Ready) {
+    if (state == TaskStateM.Ready && undefined == taskData.freelancersData.freelancers.find(el => el.toUpperCase() == walletAddress.toUpperCase())) {
         return (
             <Container>
                 <VStack
@@ -124,20 +264,31 @@ function FreelancerActions({ walletAddress, state, taskData, setErrors }) {
                     >
                         Apply
                     </OutlinedButton>
-
+                </VStack>
+            </Container>
+        )
+    }
+    if (state == TaskStateM.WorkingOnIt && walletAddress.toUpperCase() == taskData.freelancersData.chosen.toUpperCase()) {
+        return (
+            <Container>
+                <VStack
+                    style={{
+                        marginBottom: "var(--space-8)",
+                    }}
+                >
                     <OutlinedButton
                         onClick={finish}
                         style={{
                             marginBottom: "var(--space-8)",
                         }}
                     >
-                        Withdraw All
+                        Finish
                     </OutlinedButton>
                 </VStack>
             </Container>
         )
     }
-    return null;
+    return 'No actions to take at this time';
 }
 
 function SponsorActions({ walletAddress, taskData, state, setErrors }) {
@@ -229,7 +380,7 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
             </VStack>
         )
     }
-    return null;
+    return 'No actions to take at this time';
 }
 
 export default function Task({ walletAddress, taskDatas, role, setErrors }) {
@@ -238,6 +389,15 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
     const { taskId } = params;
     const [managerName, setManagerName] = useState('Loading...');
     const [categoryName, setCategoryName] = useState('Loading...');
+    const [evaluatorName, setEvaluatorName] = useState('Loading...');
+
+    useEffect(() => {
+        if (evaluatorName == 'Loading...' &&
+            (taskDatas && taskId < taskDatas[taskId].length) &&
+            taskData.evaluator == 0) {
+            setEvaluatorName(undefined);
+        }
+    });
 
     if (!taskDatas || taskId >= taskDatas.length) {
         return 'Not found task';
@@ -253,6 +413,11 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
         .then(setCategoryName)
         .catch(e => setErrors([e]));
 
+    if (taskData.evaluator != 0) {
+        memberManager.getEvaluatorInfo(taskData.evaluator)
+            .then(info => info && setEvaluatorName(info.data.name))
+            .catch(e => setErrors([e]));
+    }
     console.log('a');
     return (
         <VStack>
@@ -289,35 +454,88 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
             }}>
                 {'Funded: ' + taskData.sponsorshipData.totalAmount}
             </p>
-
+            {evaluatorName && (
+                <p style={{
+                    marginBottom: "var(--space-8)",
+                }}>
+                    {'Evaluator: ' + evaluatorName}
+                </p>
+            )}
 
             {/* Action section */}
             {role == memberManager.Role.Freelancer ? (
-                <FreelancerActions
-                    state={state}
-                    setErrors={setErrors}
-                    taskData={taskData}
-                    walletAddress={walletAddress}
-                />) : null
+                <VStack>
+                    <h4
+                        style={{
+                            alignSelf: 'center'
+                        }}
+                    >
+                        Freelancer panel:
+                    </h4>
+                    <FreelancerActions
+                        state={state}
+                        setErrors={setErrors}
+                        taskData={taskData}
+                        walletAddress={walletAddress}
+                    />
+                </VStack>
+            ) : null
             }
             {
                 role == memberManager.Role.Sponsor ? (
-                    <SponsorActions
-                        walletAddress={walletAddress}
+                    <VStack>
+                        <h4
+                            style={{
+                                alignSelf: 'center'
+                            }}
+                        >
+                            Sponsor panel:
+                        </h4>
+                        <SponsorActions
+                            walletAddress={walletAddress}
+                            taskData={taskData}
+                            state={state}
+                            setErrors={setErrors}
+                        />
+                    </VStack>
+                ) : null
+            }
+            {role == memberManager.Role.Manager ? (
+                <VStack>
+                    <h4
+                        style={{
+                            alignSelf: 'center'
+                        }}
+                    >
+                        Manager panel:
+                    </h4>
+                    <ManagerActions
+                        taskId={taskId}
+                        taskData={taskData}
+                        categoryId={taskData.data.category}
+                        state={state}
+                        setErrors={setErrors}
+                    />
+                </VStack>
+            ) : null}
+            {role == memberManager.Role.Evaluator ? (
+                <VStack>
+                    <h4
+                        style={{
+                            alignSelf: 'center'
+                        }}
+                    >
+                        Evaluator panel:
+                    </h4>
+                    <EvaluatorActions
+                        taskId={taskId}
                         taskData={taskData}
                         state={state}
                         setErrors={setErrors}
-                    />) : null
-            }
-            {role == memberManager.Role.Manager ? (
-                <ManagerActions
-                    taskId={taskId}
-                    categoryId={taskData.data.category}
-                    state={state}
-                    setErrors={setErrors}
-                />) : null
-            }
-            {//role == memberManager.Role.Evaluator ? (<EvaluatorActions />) : null
+                        walletAddress={walletAddress}
+                    />
+                </VStack>
+            ) : null
             }
         </VStack >
     );

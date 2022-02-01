@@ -83,11 +83,11 @@ export default function Register({ walletAddress, setErrors }) {
             else {
                 return;
             }
+            setRole(selectionRoleId);
+
         } catch (e) {
             setErrors([e]);
         }
-
-        setRole(selectionRoleId);
     }
 
     // Actual code
