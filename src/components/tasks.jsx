@@ -2,7 +2,7 @@ import { HStack, VStack } from '../styles';
 import TaskCard from './taskcard';
 
 export default function Tasks({ taskDatas }) {
-    return (
+    return taskDatas && (
         <VStack>
             {/* TASKS */}
             <HStack

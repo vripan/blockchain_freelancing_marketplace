@@ -10,6 +10,8 @@ import { GlobalStyles, VStack, HStack, Wrapper, Divider, UnstyledButton, Outline
 import Tasks from './components/tasks';
 import Register from './register';
 import Contracts from './contracts';
+import Task from './task';
+import CreateTask from './createTask';
 
 const MARKETPLACE_CHAIN_ID = 1337;
 
@@ -17,13 +19,16 @@ async function connect() {
     window.ethereum.request({ method: "eth_requestAccounts" });
 }
 
-function useWalletAddress() {
+function useWalletAddress(setRole) {
     const { ethereum } = window;
     let value = ethereum && ethereum.selectedAddress;
     const [address, setAddress] = useState(value);
 
     useEffect(() => {
-        const onAddressChanged = (addresses) => setAddress(addresses[0]);
+        const onAddressChanged = (addresses) => {
+            setAddress(addresses[0]);
+            setRole(null);
+        };
         ethereum && ethereum.on("accountsChanged", onAddressChanged);
         return () => {
             ethereum && ethereum.removeListener("accountsChanged", onAddressChanged);
@@ -74,6 +79,26 @@ function Address({ address }) {
     );
 }
 
+function useTokens(address, chainId) {
+    const { tokenC } = Contracts;
+    const [tokens, setTokens] = useState(null);
+
+    useEffect(() => {
+        let fetchedBalance = setTokens;
+        function check() {
+            tokenC.balanceOf(address).then(fetchedBalance);
+        }
+        check();
+        const interval = setInterval(check, 3000);
+        return () => {
+            clearInterval(interval);
+            fetchedBalance = null;
+        };
+    }, [address, chainId]);
+
+    return tokens
+}
+
 function useBalance(address, chainId) {
     const { ethereum } = window;
     const [balance, setBalance] = useState(null);
@@ -97,6 +122,7 @@ function useBalance(address, chainId) {
 
 function Balance({ walletAddress, chainId }) {
     const balance = useBalance(walletAddress, chainId);
+    const tokens = useTokens(walletAddress, chainId);
 
     if (balance === null) {
         return <span>Checking balance...</span>;
@@ -104,8 +130,38 @@ function Balance({ walletAddress, chainId }) {
 
     return (
         <span style={{ marginRight: "var(--space-8)", whiteSpace: "nowrap" }}>
-            {ethers.utils.formatEther(balance).slice(0, 6)} ETH
+            {tokens + ' '}<span style={{ color: 'orange' }}>TKN</span>
+            {' ' + ethers.utils.formatEther(balance).slice(0, 6) + ' ETH'}
         </span>
+    );
+}
+
+function RequestTKN({ address }) {
+    const [requesting, setRequesting] = useState(false);
+    const { tokenC } = Contracts;
+
+    async function getTokens(e) {
+        e.preventDefault();
+        setRequesting(true);
+        tokenC.mint().then(() => setRequesting(false));
+        //await new Promise((resolve) => setTimeout(resolve, 20 * 1000));
+    }
+
+    if (requesting) {
+        return (
+            <span
+                className={requesting && "animate-flicker"}
+                style={{ color: "var(--fg-dimmest)", textAlign: "right" }}
+            >
+                Requesting TKN...
+            </span>
+        )
+    }
+
+    return (
+        <a style={{ textAlign: "right" }} href="#" onClick={getTokens}>
+            Get TKN for testing
+        </a>
     );
 }
 
@@ -190,22 +246,25 @@ function ChainInfo({ chainId }) {
     );
 }
 
-let initialized = false;
-
 export default function Dapp() {
-    const walletAddress = useWalletAddress();
-    const chainId = useChainId();
-    const [hasRole, setHasRole] = useState(false);
+    const { taskManager, memberManager } = Contracts;
 
-    const { taskManager } = Contracts;
+    const [role, setRole] = useState(null);
+    const [taskDatas, setTaskDatas] = useState(null);
+    const [showError, setShowError] = useState(false);
+    const [errors, setErrors] = useState(null);
 
-    const [taskDatas, setTaskDatas] = useState([]);
+    const walletAddress = useWalletAddress(setRole);
+    // DEVELOPMENT!!! const chainId = useChainId();
+    const chainId = MARKETPLACE_CHAIN_ID;
+
     useEffect(() => {
-        if (chainId != MARKETPLACE_CHAIN_ID) {
+        if (chainId != MARKETPLACE_CHAIN_ID ||
+            (typeof window.ethereum === "undefined")) {
             return;
         }
 
-        if (!initialized) {
+        if (!taskDatas) {
             (async () => {
                 let resCount = await taskManager.getTasksCount();
                 let datas = [];
@@ -213,17 +272,25 @@ export default function Dapp() {
                     let td = await taskManager.getTaskData(i);
                     td.taskId = i;
                     datas.push(td);
-                    // console.log(td);
+                    console.log(td);
                 }
                 setTaskDatas(datas);
                 // console.log('settaskdata');
             })();
-            // console.log('init');
-            initialized = true;
+        }
+
+        if (walletAddress && role == null) {
+            (async () => {
+                let role = await memberManager.getRole(walletAddress);
+                setRole(role);
+            })();
         }
         // console.log('effect');
     });
-    // console.log('Dapp');
+
+    useEffect(() => {
+        setShowError(true);
+    }, [errors]);
 
     if (typeof window.ethereum === "undefined") {
         return (
@@ -236,7 +303,7 @@ export default function Dapp() {
                     padding: 40,
                 }}
             >
-                <h1 style={{ textAlign: "center" }}>Dapp 🤝 Ethereum</h1>
+                <h1 style={{ textAlign: "center" }}>Dapp 🤝 Marketplace</h1>
                 <a
                     style={{ whiteSpace: "nowrap" }}
                     href="https://metamask.io/"
@@ -267,8 +334,7 @@ export default function Dapp() {
         );
     }
 
-    if (chainId != "1" && chainId != MARKETPLACE_CHAIN_ID) {
-        console.log(chainId);
+    if (chainId != MARKETPLACE_CHAIN_ID) {
         return (
             <Wrapper>
                 <GlobalStyles />
@@ -284,6 +350,40 @@ export default function Dapp() {
             <Wrapper>
                 <GlobalStyles />
 
+                {/* MESSAGE DIALOG 
+			    automatically opens on error but can be reopened with the error button
+			    */}
+                {errors && showError ? (
+                    <Overlay>
+                        <VStack
+                            style={{
+                                width: "75%",
+                                maxWidth: "400px",
+                                backgroundColor: "var(--bg-default)",
+                                border: "1px solid var(--outline-default)",
+                                padding: "var(--space-16)",
+                                borderRadius: "var(--br-8)",
+                            }}
+                        >
+                            <HStack
+                                style={{
+                                    width: "100%",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                }}
+                            >
+                                <h1>Error</h1>
+                                <UnstyledButton onClick={() => setShowError(false)}>
+                                    <X size={16} />
+                                </UnstyledButton>
+                            </HStack>
+                            <pre className="code-error">
+                                {errors.map((e) => e.formattedMessage || e.message || e).join("\n\n")}
+                            </pre>
+                        </VStack>
+                    </Overlay>
+                ) : null}
+
                 {/* HEADER */}
                 <HStack
                     className="main-header"
@@ -294,12 +394,19 @@ export default function Dapp() {
                     }}
                 >
                     <VStack>
-                        <h1
-                            className="main-title"
-                            style={{ paddingBottom: "var(--space-8)" }}
+                        <Link
+                            style={{
+                                textDecoration: 'none'
+                            }}
+                            to="/"
                         >
-                            Dapp 🤝 Ethereum
-                        </h1>
+                            <h1
+                                className="main-title"
+                                style={{ paddingBottom: "var(--space-8)" }}
+                            >
+                                Dapp 🤝 Marketplace
+                            </h1>
+                        </Link>
                         {walletAddress && <ChainInfo chainId={chainId} />}
                     </VStack>
 
@@ -316,6 +423,8 @@ export default function Dapp() {
                                 />
                                 <Address address={ethers.utils.getAddress(walletAddress)} />
                             </HStack>
+
+                            <RequestTKN />
                         </VStack>
                     ) : (
                         <button className="primary" onClick={connect}>
@@ -325,15 +434,56 @@ export default function Dapp() {
 
                 </HStack>
 
-                {!hasRole ? (<Link to="/register">Get role</Link>) : null}
+                <HStack
+                    style={{
+                        alignItems: 'end',
+                        justifyContent: "space-between"
+                    }}
+                >
+                    <Link to="/register"
+                        style={{
+                            textDecoration: 'none'
+                        }}
+                    >
+                        <OutlinedButton>
+                            {!role ? ('Join the market') : ('You have joined the market!')}
+                        </OutlinedButton>
+                    </Link>
+
+                    {role == memberManager.Role.Manager
+                        ? (<Link to="/create" style={{
+                            textDecoration: 'none'
+                        }}>
+                            <OutlinedButton>
+                                Create a task
+                            </OutlinedButton>
+                        </Link>)
+                        : null}
+                </HStack>
 
                 <Divider style={{ marginBottom: "var(--space-24)" }} />
 
                 <Routes>
-                    <Route path='/' element={<Tasks taskDatas={taskDatas} />} />
-                    <Route path="/register" element={!hasRole ? <Outlet /> : <Navigate to="/" />}>
-                        <Route path='/register' element={<Register walletAddress={walletAddress} />} />
-                    </Route>
+                    <Route path='/' element={
+                        <Tasks
+                            taskDatas={taskDatas}
+                        />}
+                    />
+                    <Route path='/register' element={
+                        <Register
+                            walletAddress={walletAddress}
+                            setErrors={setErrors}
+                        />}
+                    />
+                    <Route path='/tasks/:taskId' element={
+                        <Task
+                            taskDatas={taskDatas}
+                            role={role}
+                            walletAddress={walletAddress}
+                            setErrors={setErrors}
+                        />
+                    } />
+                    <Route path='/create' element={<CreateTask setErrors={setErrors} />} />
                 </Routes>
 
             </Wrapper>

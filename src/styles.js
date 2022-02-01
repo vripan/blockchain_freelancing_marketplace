@@ -220,8 +220,7 @@ export const UnstyledButton = styled.button `
   background: transparent;
 `;
 
-export const OutlinedButton = styled(UnstyledButton)
-`
+export const OutlinedButton = styled(UnstyledButton)`  
   font-weight: medium;
   border: 1px solid var(--bg-highest);
   background-color: var(--bg-root);
@@ -278,4 +277,10 @@ export const Divider = styled.div `
   height: 1px;
   width: 100%;
   margin: var(--space-16) 0;
+`;
+
+export const Container = styled.div `
+  border: 1px solid var(--bg-highest);
+  background-color: var(--bg-root);
+  padding: var(--space-16);
 `;
