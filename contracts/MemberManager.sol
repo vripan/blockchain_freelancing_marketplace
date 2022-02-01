@@ -270,7 +270,7 @@ contract MemberManager is Ownable
         view
         returns(address[] memory)
     {
-        return freelancersArr;
+        return evaluatorsArr;
     } 
 
     function getRole(address _address) 

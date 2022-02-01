@@ -20,7 +20,7 @@
     "serve": "^13.0.2"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "latest",
+    "@openzeppelin/contracts": "^4.4.2",
     "@openzeppelin/test-helpers": "^0.5.15",
     "evm-chains": "^0.2.0",
     "microtip": "^0.2.2",

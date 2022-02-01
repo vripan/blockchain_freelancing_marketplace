@@ -56,4 +56,16 @@ contract CategoryManager is Ownable
     {
         return nextId;
     }
+
+    function getCategories()
+        external 
+        view
+        returns(string[] memory)
+    {
+        string[] memory categArr = new string[](nextId);
+        for(uint i = 0; i < nextId; i++){
+            categArr[i] = categories[i];
+        }
+        return categArr;
+    }
 }

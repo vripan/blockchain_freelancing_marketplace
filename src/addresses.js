@@ -1,2 +1,2 @@
 
-            export default {"TaskManager":"0x6A2c83b25ce564F0ab0A5C7AC0BAb457DCE7a62E","CategoryManager":"0xf2CBd453df27EEcB66f0789e9D0B5c93Ce83c288","MemberManager":"0x1Cac5c99FC242aD18e9b9f226aB992Aa29dABaDD","Token":"0x18137c3a74eC722074a971A44b5c83c9CeA0468E"};
+            export default {"TaskManager":"0x56F535E991336A6a47EA654228d78dB29cEbB91c","CategoryManager":"0xdac47BfB38bC9d2a10fC356eAAE39f80E36bD2f5","MemberManager":"0x93F3B1fe6bcaFE431813CfbBe552B6DCb9992756","Token":"0xE39B56d96e7754fc995ef390bC148C752cC97127"};
