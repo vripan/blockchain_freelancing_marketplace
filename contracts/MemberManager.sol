@@ -57,6 +57,11 @@ contract MemberManager is Ownable
 
     mapping(address => Role) internal roles;
 
+    address[] freelancersArr;
+    address[] managersArr;
+    address[] sponsorsArr;
+    address[] evaluatorsArr;
+
     mapping(address => MemberData.FreelancerDataExtended) internal freelancers;
     mapping(address => MemberData.ManagerDataExtended) internal managers;
     mapping(address => MemberData.SponsorDataExtended) internal sponsors;
@@ -107,6 +112,8 @@ contract MemberManager is Ownable
             }
         );
 
+        freelancersArr.push(msg.sender);
+
         membersCount++;
         emit MemberJoined(Role.Freelancer, _data.name, msg.sender);
     }
@@ -124,6 +131,8 @@ contract MemberManager is Ownable
             }
         );
 
+        managersArr.push(msg.sender);
+
         membersCount++;
         emit MemberJoined(Role.Manager, _data.name, msg.sender);
     }
@@ -140,6 +149,8 @@ contract MemberManager is Ownable
                 data : _data
             }
         );
+
+        sponsorsArr.push(msg.sender);
 
         membersCount++;
         emit MemberJoined(Role.Sponsor, _data.name, msg.sender);
@@ -159,9 +170,28 @@ contract MemberManager is Ownable
             }
         );
 
+        evaluatorsArr.push(msg.sender);
+
         membersCount++;
         emit MemberJoined(Role.Evaluator, _data.name, msg.sender);
     }
+
+    function updateFreelancerReputation(address _address, bool increase)
+        public
+        restricted
+    {
+        if (increase) 
+        {
+            if(freelancers[_address].rep <= 9)
+                freelancers[_address].rep += 1;
+        } else 
+        {
+            if (freelancers[_address].rep >= 2) 
+            freelancers[_address].rep -= 1;
+        }
+
+        emit FreelancerReputationChanged(_address, increase);
+    }       
    
    /**
     * @dev Get unchecked role info
@@ -211,24 +241,37 @@ contract MemberManager is Ownable
         return data;
     }
 
-    function updateFreelancerReputation(address _address, bool increase)
-        public
-        restricted
+    function getFreelancersArray()
+        external
+        view
+        returns(address[] memory)
     {
-        if (increase) 
-        {
-            if(freelancers[_address].rep <= 9)
-                freelancers[_address].rep += 1;
-        } else 
-        {
-            if (freelancers[_address].rep >= 2) 
-            freelancers[_address].rep -= 1;
-        }
-
-        emit FreelancerReputationChanged(_address, increase);
-    }        
-
+        return freelancersArr;
+    }
     
+    function getManagersArray()
+        external
+        view
+        returns(address[] memory)
+    {
+        return managersArr;
+    } 
+    
+    function getSponsorsArray()
+        external
+        view
+        returns(address[] memory)
+    {
+        return sponsorsArr;
+    } 
+    
+    function getEvaluatorsArray()
+        external
+        view
+        returns(address[] memory)
+    {
+        return freelancersArr;
+    } 
 
     function getRole(address _address) 
         public 
