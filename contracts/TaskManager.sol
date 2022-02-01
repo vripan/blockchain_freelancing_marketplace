@@ -193,9 +193,13 @@ contract TaskManager
         taskInState(taskId, MarketplaceEntities.TaskState.Ready)
     {
         require(memberManager.getFreelancerInfo(msg.sender).data.categoryId == tasks[taskId].data.category, "E14");
+
+        require(tasks[taskId].freelancersData.mFreelancers[msg.sender] == false, "Already Applied!");
+
         requireSenderAllowance(tasks[taskId].data.rewardEvaluator);
         token.transferFrom(msg.sender, address(this), tasks[taskId].data.rewardEvaluator);
 
+        tasks[taskId].freelancersData.mFreelancers[msg.sender] == true;
         tasks[taskId].freelancersData.freelancers.push(msg.sender);
 
         emit MarketplaceEntities.TaskFreelancerApplied(taskId, msg.sender);
@@ -322,6 +326,8 @@ contract TaskManager
             
             MarketplaceEntities.TaskDataExtended storage task = tasks[taskId];
             MarketplaceEntities.SponsorshipDataExternal memory spData;
+            MarketplaceEntities.FreelancersDataExternal memory flData = 
+                MarketplaceEntities.FreelancersDataExternal({freelancers: task.freelancersData.freelancers, chosen: task.freelancersData.chosen});
             
             spData.sponsors = new MarketplaceEntities.SponsorshipInfo[](task.sponsorshipData.sponsors.length);
             spData.totalAmount = task.sponsorshipData.totalAmount;
@@ -338,7 +344,7 @@ contract TaskManager
                     data: task.data,
                     manager: task.manager,
                     sponsorshipData: spData,
-                    freelancersData: task.freelancersData,
+                    freelancersData: flData,
                     evaluator: task.evaluator,
                     state: task.state,
                     readyTimestamp: task.readyTimestamp

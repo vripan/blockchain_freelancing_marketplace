@@ -22,8 +22,13 @@ library MarketplaceEntities
         SponsorshipInfo[] sponsors;
         uint totalAmount;
     }
+    struct FreelancersData{
+        mapping(address => bool) mFreelancers;
+        address[] freelancers;
+        address chosen;
+    }
 
-    struct FreelancersData
+    struct FreelancersDataExternal
     {
         address[] freelancers;
         address chosen;
@@ -44,7 +49,7 @@ library MarketplaceEntities
         TaskData data;
         address manager;
         SponsorshipDataExternal sponsorshipData;
-        FreelancersData freelancersData;
+        FreelancersDataExternal freelancersData;
         address evaluator;
         TaskState state;
         uint256 readyTimestamp;
