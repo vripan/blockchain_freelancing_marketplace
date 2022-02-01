@@ -9,9 +9,16 @@ function EvaluatorCard({ info, onClick }) {
             onClick={onClick}
             style={{
                 alignItems: 'space-between',
+                display: "flex",
+                justifyContent: "space-around",
+                flexDirection: "row",
+                cursor: "pointer",
             }}
         >
             {'Name: ' + info.name}
+            <span style={{ color: 'greenyellow' }}>
+                Assign this evaluator
+            </span>
         </HStack>
     );
 }
@@ -20,24 +27,31 @@ function ManagerActions({ state, categoryId, taskId, setErrors }) {
     let { taskManager, TaskStateM, memberManager } = Contracts;
     const [evaluators, setEvaluators] = useState(null);
 
-    (async () => {
-        let evalAdresses = await memberManager.getEvaluatorsArray();
-        let ea = [];
-        for (let i = 0; i < evalAdresses.length; i++) {
-            let info = await memberManager.getEvaluatorInfo(evalAdresses[i]);
-            if (info.data.categoryId == categoryId) {
-                let data = info.data;
-                data.address = evalAdresses[i];
-                ea.push(data);
-            }
+    useEffect(() => {
+        if (evaluators == null) {
+            (async () => {
+                let evalAdresses = await memberManager.getEvaluatorsArray();
+                let ea = [];
+                console.log(evalAdresses);
+
+                for (let i = 0; i < evalAdresses.length; i++) {
+                    let info = await memberManager.getEvaluatorInfo(evalAdresses[i]);
+                    console.log(info);
+                    if (info.data.categoryId.toNumber() == categoryId) {
+                        let data = info.data;
+                        data.address = evalAdresses[i];
+                        ea.push(data);
+                    }
+                }
+                setEvaluators(ea);
+            })();
         }
-        setEvaluators(ea);
-    })();
+    });
 
     const chooseEvaluator = (evaluatorAddress) => {
         taskManager.linkEvaluatorToTask(taskId, evaluatorAddress)
             .then(() => setEvaluators(null))
-            .error(e => setErrors([e]));
+            .catch(e => setErrors([e]));
     };
     console.log('b');
 
@@ -138,15 +152,6 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
         tokenC.allowance(walletAddress, taskManager.address)
             .then((currentAllowance) => {
 
-                if (currentAllowance.toNumber() < parseInt(tokenAmount)) {
-                    tokenC.approve(taskManager.address, parseInt(tokenAmount))
-                        .then(goSponsor)
-                        .catch((e) => setErrors([e]));
-                }
-                else {
-                    goSponsor();
-                }
-
                 const goSponsor = () => {
                     taskManager.sponsorTask(taskData.taskId, parseInt(tokenAmount))
                         .then((res) => {
@@ -154,6 +159,15 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
                             setTokenAmount("0");
                         })
                         .catch((e) => setErrors([e]));
+                }
+
+                if (currentAllowance.toNumber() < parseInt(tokenAmount)) {
+                    tokenC.approve(taskManager.address, parseInt(tokenAmount))
+                        .then(goSponsor)
+                        .catch((e) => setErrors([e]));
+                }
+                else {
+                    goSponsor();
                 }
             })
             .catch((e) => setErrors([e]));
@@ -219,10 +233,11 @@ function SponsorActions({ walletAddress, taskData, state, setErrors }) {
 }
 
 export default function Task({ walletAddress, taskDatas, role, setErrors }) {
-    let { memberManager, taskManager, TaskState, TaskStateM } = Contracts;
+    let { memberManager, taskManager, TaskState, TaskStateM, categoryManager } = Contracts;
     const params = useParams();
     const { taskId } = params;
     const [managerName, setManagerName] = useState('Loading...');
+    const [categoryName, setCategoryName] = useState('Loading...');
 
     if (!taskDatas || taskId >= taskDatas.length) {
         return 'Not found task';
@@ -230,8 +245,12 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
     let taskData = taskDatas[taskId];
     let state = taskData.state;
 
-    memberManager.getManagerInfo(taskDatas[taskId].manager)
+    memberManager.getManagerInfo(taskData.manager)
         .then((info) => setManagerName(info.data.name))
+        .catch(e => setErrors([e]));
+
+    categoryManager.getCategoryName(taskData.data.category)
+        .then(setCategoryName)
         .catch(e => setErrors([e]));
 
     console.log('a');
@@ -245,6 +264,11 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
             >
                 Description: {' ' + taskData.data.description}
             </h3>
+            <p style={{
+                marginBottom: "var(--space-8)",
+            }}>
+                {'Category: ' + categoryName}
+            </p>
             <p style={{
                 marginBottom: "var(--space-8)",
             }}>
@@ -265,6 +289,9 @@ export default function Task({ walletAddress, taskDatas, role, setErrors }) {
             }}>
                 {'Funded: ' + taskData.sponsorshipData.totalAmount}
             </p>
+
+
+            {/* Action section */}
             {role == memberManager.Role.Freelancer ? (
                 <FreelancerActions
                     state={state}

@@ -272,7 +272,7 @@ export default function Dapp() {
                     let td = await taskManager.getTaskData(i);
                     td.taskId = i;
                     datas.push(td);
-                    console.log(td);
+                    // console.log(td);
                 }
                 setTaskDatas(datas);
                 // console.log('settaskdata');

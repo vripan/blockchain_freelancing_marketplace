@@ -40,7 +40,7 @@ module.exports = async function (callback) {
         });
 
         tx = await taskManager.addTask({
-            description: "This is a description of the task2",
+            description: "This is a description of the task",
             rewardFreelancer: 10,
             rewardEvaluator: 10,
             category: 0

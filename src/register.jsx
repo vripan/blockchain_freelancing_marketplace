@@ -1,6 +1,7 @@
 import { HStack, OutlinedButton, VStack } from './styles';
 import { useEffect, useState } from 'react';
 import Contracts from './contracts';
+import Categories from './components/categories';
 
 export default function Register({ walletAddress, setErrors }) {
     let { memberManager } = Contracts;
@@ -8,7 +9,7 @@ export default function Register({ walletAddress, setErrors }) {
     let [role, setRole] = useState(null);
     let [selectionRoleId, setSelectionRoleId] = useState(0);
     let [name, setName] = useState('Steve');
-    let [category, setCategory] = useState('0');
+    let [selectionCategoryId, setSelectionCategoryId] = useState(0);
 
     // Form Stuff
     const NameForm = () => (
@@ -23,15 +24,10 @@ export default function Register({ walletAddress, setErrors }) {
         </HStack>
     );
     const CategoryForm = () => (
-        <HStack
-            style={{
-                marginBottom: "var(--space-16)",
-            }}
-        >
-            <p>CategoryId:</p>
-            <pre> </pre>
-            <input value={category} onChange={({ target: { value } }) => setCategory(value)} />
-        </HStack>
+        <Categories
+            disValue={selectionCategoryId}
+            onChange={setSelectionCategoryId}
+        />
     );
     const roleOptions = [
         { value: 0, label: "Unknown" },
@@ -73,7 +69,7 @@ export default function Register({ walletAddress, setErrors }) {
         let result;
         try {
             if (selectionRoleName == "Freelancer") {
-                result = await memberManager.joinAsFreelancer({ name: name, categoryId: parseInt(category) });
+                result = await memberManager.joinAsFreelancer({ name: name, categoryId: parseInt(selectionCategoryId) });
             }
             else if (selectionRoleName == "Manager") {
                 result = await memberManager.joinAsManager({ name: name })
@@ -82,13 +78,13 @@ export default function Register({ walletAddress, setErrors }) {
                 result = await memberManager.joinAsSponsor({ name: name })
             }
             else if (selectionRoleName == "Evaluator") {
-                result = await memberManager.joinAsEvaluator({ name: name, categoryId: parseInt(category) })
+                result = await memberManager.joinAsEvaluator({ name: name, categoryId: parseInt(selectionCategoryId) })
             }
             else {
                 return;
             }
         } catch (e) {
-            setErrors(e);
+            setErrors([e]);
         }
 
         setRole(selectionRoleId);
