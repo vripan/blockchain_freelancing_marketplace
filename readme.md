@@ -1,5 +1,7 @@
 # Freelancing Marketplace - DAPP
 
+Homework for master course Blockchain: Foundations and Applications, Al. I. Cuza University, Iasi, Fall 2022
+
 ### Tutorial
 https://www.dappuniversity.com/articles/the-ultimate-ethereum-dapp-tutorial
 
